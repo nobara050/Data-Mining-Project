@@ -15,13 +15,13 @@ import atexit
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='matplotlib')
 
+app = Flask(__name__)
+
 def cleanup():
     import matplotlib.pyplot as plt
     plt.close('all')  # Close all figures to avoid issues with Matplotlib in Flask
-
 atexit.register(cleanup)
 
-app = Flask(__name__)
 
 # Thư mục upload
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -41,7 +41,7 @@ def index():
     clear_uploads()  # Xóa file khi chuyển trang
     return render_template('index.html')
 
-# Route cho chương 1 đến chương 4
+# Route cho chương 1 đến chương 5
 @app.route('/chuong1', methods=['GET'])
 def chuong1_get():
     clear_uploads()  # Xóa file khi chuyển chương
@@ -101,6 +101,15 @@ def upload_csv():
         return jsonify({'table': table_html, 'columns': columns}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ==========================================
+# ==========================================
+# =====                               ======
+# =====          CHƯƠNG 4             ======
+# =====                               ======
+# ==========================================
+# ==========================================
+
 
 
 # ==========================================
