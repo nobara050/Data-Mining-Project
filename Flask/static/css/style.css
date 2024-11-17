@@ -1,0 +1,148 @@
+/* Layout */
+* {
+  padding: 0;
+  margin: 0;
+  text-decoration: none;
+  list-style: none;
+  color: black; /* Màu chữ đen */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #eaecef;
+}
+
+nav {
+  width: 100%;
+  background-color: #f6f8fa;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  min-height: 50px;
+  max-height: 50px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.wrapper {
+  max-width: 1080px;
+  background: #ffffff;
+  min-height: 800px;
+  width: 100%;
+  margin: 1.5rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+/* nav */
+.logo a {
+  font-weight: 500;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.option a {
+  padding: 0.8rem;
+  font-weight: 400;
+}
+
+.option a:hover {
+  background-color: #464646;
+  color: white;
+  border-radius: 0.25rem;
+}
+
+/* input table */
+.titlePage {
+  margin: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.table-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 37.5rem;
+  max-width: 37.5rem;
+}
+
+.table-container table {
+  max-width: 37.5rem;
+  max-height: 16rem;
+  min-height: 16rem;
+  overflow: auto;
+  display: block;
+  border-collapse: collapse;
+  margin-top: 1.25rem;
+  border: none;
+  border-radius: 0.25rem;
+}
+
+.table-container table th,
+.table-container table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.table-container th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.columns-buttons-container {
+  max-height: 16rem;
+  display: block;
+  overflow: auto;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-top: 2.75rem;
+  margin-left: 2rem;
+  width: 100%;
+}
+
+.column-btn {
+  width: 90%;
+  margin: 0.25rem;
+}
+
+.column-btn {
+  padding: 10px 15px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+}
+
+.column-btn:hover {
+  background-color: #104213;
+}
+
+.upload-label {
+  margin: 1rem;
+  font-size: large;
+}
+
+.inputFile {
+  display: flex;
+  min-height: 330px;
+  padding: 1rem;
+}
+
+#csv-upload {
+  font-size: 1rem;
+}

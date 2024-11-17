@@ -1,0 +1,56 @@
+.column-btn.selected {
+  background-color: #082209; /* Green background for selected column */
+  color: white;
+}
+
+.inputKmean {
+  margin-left: 3rem;
+  font-size: larger;
+  font-weight: 400;
+}
+
+.numKmean {
+  padding: 0.2rem;
+  font-size: medium;
+  font-weight: 400;
+  max-width: 5rem;
+  border-radius: 0.25rem;
+  background: #ffffff;
+  border: 2px solid #000000;
+}
+
+#start-kmean-btn {
+  padding: 0.25rem;
+  background-color: #f3faf7;
+  font-size: medium;
+  border-radius: 0.25rem;
+  color: #046e54;
+  border: 2px solid #0e9f6e;
+  margin-left: 1rem;
+}
+
+#start-kmean-btn:hover {
+  background-color: #fdf2f2;
+  color: #cf3f40;
+  border: 2px solid #f05252;
+}
+
+.result-container {
+  margin-top: 2rem;
+}
+
+.cluster {
+  margin: 1rem;
+  margin-left: 3rem;
+}
+
+.cluster h4 {
+  margin: 0.25rem;
+  font-size: medium;
+}
+
+.cluster input {
+  padding: 0.25rem;
+  font-size: medium;
+  border-radius: 0.25rem;
+}
