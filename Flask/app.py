@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import os
+import matplotlib
+matplotlib.use('Agg')
 import pandas as pd
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
@@ -9,6 +11,15 @@ from werkzeug.utils import secure_filename
 import json
 from io import BytesIO
 import base64
+import atexit
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='matplotlib')
+
+def cleanup():
+    import matplotlib.pyplot as plt
+    plt.close('all')  # Close all figures to avoid issues with Matplotlib in Flask
+
+atexit.register(cleanup)
 
 app = Flask(__name__)
 
@@ -153,23 +164,21 @@ def chuong5():
             ]
             cluster_result.append(cluster_row)
 
-        # Create 3D scatter plot
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
+        # Create 2D scatter plot
+        fig, ax = plt.subplots(figsize=(10, 8))
 
         # Plot each cluster with a different color
-        colors = ['r', 'g', 'b']
+        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # You can add more colors as needed
         for cluster in range(k):
             cluster_data = df[df["Cluster"] == cluster]
-            ax.scatter(cluster_data[selected_columns[0]], cluster_data[selected_columns[1]], cluster_data[selected_columns[2]],
-                       label=f"Cụm {cluster + 1}", c=colors[cluster], s=100)
+            ax.scatter(cluster_data[selected_columns[0]], cluster_data[selected_columns[1]],
+                       label=f"Cụm {cluster + 1}", c=colors[cluster % len(colors)], s=100)
 
         # Labels and legend
         ax.set_xlabel(selected_columns[0])
         ax.set_ylabel(selected_columns[1])
-        ax.set_zlabel(selected_columns[2])
         plt.legend()
-        plt.title('KMeans Clustering - 3D Plot')
+        plt.title('KMeans Clustering - 2D Plot')
 
         # Save the plot to a BytesIO object
         img_io = BytesIO()
