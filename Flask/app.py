@@ -1,17 +1,22 @@
-from flask import Flask, request, jsonify, render_template
-import os
-import matplotlib
-matplotlib.use('Agg')
-import pandas as pd
-from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from werkzeug.utils import secure_filename
 import chardet  # Để phát hiện encoding
 from mpl_toolkits.mplot3d import Axes3D
-from werkzeug.utils import secure_filename
-import json
+from sklearn.cluster import KMeans
+from IPython.display import Image
+import matplotlib.pyplot as plt
+from sklearn import metrics
+from io import StringIO
 from io import BytesIO
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import pydotplus
 import base64
 import atexit
+import json
+import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='matplotlib')
 
@@ -34,6 +39,12 @@ def clear_uploads():
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
+# Favicon
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        app.static_folder, 'favicon.ico', mimetype='image/vnd.microsoft.icon'
+    )
 
 # Route cho trang chính
 @app.route('/')
@@ -85,20 +96,22 @@ def upload_csv():
 
     try:
         clear_uploads()
-        # Lưu file
         filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
 
-        # Phát hiện encoding file
         encoding = detect_encoding(filepath)
-
-        # Đọc CSV với encoding đã phát hiện
         df = pd.read_csv(filepath, encoding=encoding)
 
         table_html = df.to_html(index=False, classes='table table-bordered', header=True)
-        columns = df.columns.tolist()  # Trả về danh sách cột
+        columns = df.columns.tolist()
 
+        # Lưu DataFrame toàn cục nếu cần
+        global dataset
+        dataset = df
+
+        # Trả về bảng HTML và danh sách cột
         return jsonify({'table': table_html, 'columns': columns}), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -110,8 +123,65 @@ def upload_csv():
 # ==========================================
 # ==========================================
 
+@app.route('/decision_tree', methods=['POST'])
+def decision_tree():
+    try:
+        selected_columns = request.json.get('selectedColumns', [])
+        target_column = request.json.get('targetColumn', None)
+
+        if not selected_columns or not target_column:
+            return jsonify({'error': 'Selected columns or target column missing'}), 400
+
+        # Tách cột target ra khỏi dữ liệu
+        target_data = dataset[target_column]  # Lưu giá trị target
+        feature_data = dataset[selected_columns]  # Dữ liệu không chứa target
+
+        # Áp dụng encoding lên feature data
+        encoded_features = pd.get_dummies(feature_data, drop_first=True)
+
+        # Gắn lại cột target vào dataset sau khi encoding
+        encoded_data = encoded_features.copy()
+        encoded_data[target_column] = target_data
+
+        # Xác định features và target
+        features = encoded_data.drop(columns=target_column)
+        target = encoded_data[target_column]
+
+        # Lưu danh sách cột đã được encoding
+        global updated_selected_columns, updated_target_column
+        updated_selected_columns = features.columns.tolist()
+        updated_target_column = target_column
+
+        # Huấn luyện Decision Tree
+        clf = DecisionTreeClassifier()
+        clf = clf.fit(features, target)
+
+        # Tính độ chính xác
+        y_pred = clf.predict(features)
+        accuracy = metrics.accuracy_score(target, y_pred)
+
+        # Trực quan hóa Decision Tree
+        dot_data = StringIO()
+        export_graphviz(
+            clf,
+            out_file=dot_data,
+            filled=True,
+            rounded=True,
+            special_characters=True,
+            feature_names=updated_selected_columns,
+            class_names=[str(c) for c in target.unique()],
+        )
+        graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+        graph_path = os.path.join(UPLOAD_FOLDER, "decision_tree.png")
+        graph.write_png(graph_path)
+
+        return jsonify({'accuracy': accuracy, 'graph': f'/static/uploads/decision_tree.png'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
+    
 # ==========================================
 # ==========================================
 # =====                               ======

@@ -1,0 +1,26 @@
+name: myenv
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12
+  - flask
+  - scikit-learn
+  - matplotlib
+  - pandas
+  - pydotplus
+  - ipython
+  - werkzeug
+  - chardet
+  - numpy
+  - scipy
+  - scikit-image
+  - pillow
+  - jinja2
+  - pip
+  - pip:
+      - base64
+      - atexit
+      - json
+      - os
+      - warnings

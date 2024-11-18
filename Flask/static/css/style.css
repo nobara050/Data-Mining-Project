@@ -102,7 +102,7 @@ nav {
   font-weight: bold;
 }
 
-.columns-buttons-container {
+#columns-buttons-container {
   max-height: 16rem;
   display: block;
   overflow: auto;

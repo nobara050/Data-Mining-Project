@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chương 5 - Gom cụm</title>
     <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
@@ -43,7 +48,7 @@
         </div>
 
         <!-- Vùng để hiển thị bảng -->
-        <div id="columns-buttons" class="columns-buttons-container"></div>
+        <div id="columns-buttons-container"></div>
       </div>
       <hr style="margin: 1rem" />
       <div class="inputKmean">
@@ -56,6 +61,7 @@
       <div id="result" class="result-container"></div>
       <div class="Diagram-cluster"></div>
     </div>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chuong5.js') }}"></script>
   </body>
 </html>

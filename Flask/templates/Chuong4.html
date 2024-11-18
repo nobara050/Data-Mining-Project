@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chương 4 - Phân lớp</title>
     <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
-    <script
-      src="{{ url_for('static', filename='js/index.js') }}"
-      defer
-    ></script>
   </head>
   <body>
     <nav>
@@ -26,6 +27,45 @@
         <a href="/chuong5">Gom cụm</a>
       </div>
     </nav>
-    <div class="wrapper"></div>
+    <div class="wrapper">
+      <div class="inputFile">
+        <!-- Form upload file CSV -->
+        <div class="btnNhapFile">
+          <label for="csv-upload" class="upload-label"></label>
+          <input
+            type="file"
+            id="csv-upload"
+            accept=".csv"
+            onchange="handleFileUpload(event)"
+          />
+          <div id="table-container" class="table-container"></div>
+        </div>
+
+        <!-- Vùng để hiển thị bảng -->
+        <div id="columns-buttons-container"></div>
+      </div>
+      <!-- Target column selection -->
+      <div>
+        <label for="target-column">Target Column: </label>
+        <input
+          type="text"
+          id="target-column"
+          placeholder="Enter target column"
+        />
+      </div>
+      <div>
+        <button onclick="runDecisionTree()">
+          <span>Run Decision Tree</span>
+        </button>
+      </div>
+    </div>
+    <script
+      src="{{ url_for('static', filename='js/index.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/chuong4.js') }}"
+      defer
+    ></script>
   </body>
 </html>
