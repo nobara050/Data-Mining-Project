@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
 from werkzeug.utils import secure_filename
 import chardet  # Để phát hiện encoding
 from mpl_toolkits.mplot3d import Axes3D
@@ -13,8 +16,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import pydotplus
+import graphviz
 import base64
 import atexit
+import time
 import json
 import os
 import warnings
@@ -27,24 +32,34 @@ def cleanup():
     plt.close('all')  # Close all figures to avoid issues with Matplotlib in Flask
 atexit.register(cleanup)
 
-
+# Biến lưu trữ cây quyết định toàn cục
+clf = None
+updated_selected_columns = []
+# encoders = {}
+# dataset = None
 # Thư mục upload
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Hàm xóa tất cả các file trong thư mục uploads
+# Hàm xóa tất cả các file trong thư mục uploads (bao gồm ảnh)
 def clear_uploads():
     if os.path.exists(UPLOAD_FOLDER):
         for filename in os.listdir(UPLOAD_FOLDER):
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
+
 # Favicon
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(
         app.static_folder, 'favicon.ico', mimetype='image/vnd.microsoft.icon'
     )
+
+@app.route('/uploads/<filename>')
+def serve_upload(filename):
+    upload_folder = os.path.join(app.root_path, 'uploads')
+    return send_from_directory(upload_folder, filename)
 
 # Route cho trang chính
 @app.route('/')
@@ -87,6 +102,12 @@ def detect_encoding(filepath):
 # Upload file sẽ lưu lại, đọc file csv để xử lý
 @app.route('/upload', methods=['POST'])
 def upload_csv():
+    global dataset, clf, updated_selected_columns  # Make clf and updated_selected_columns global
+
+    # Reset model and selected columns on each upload
+    clf = None
+    updated_selected_columns = []
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -105,11 +126,9 @@ def upload_csv():
         table_html = df.to_html(index=False, classes='table table-bordered', header=True)
         columns = df.columns.tolist()
 
-        # Lưu DataFrame toàn cục nếu cần
-        global dataset
+        # Save DataFrame globally
         dataset = df
 
-        # Trả về bảng HTML và danh sách cột
         return jsonify({'table': table_html, 'columns': columns}), 200
 
     except Exception as e:
@@ -123,8 +142,11 @@ def upload_csv():
 # ==========================================
 # ==========================================
 
+# Route to create decision tree model
 @app.route('/decision_tree', methods=['POST'])
 def decision_tree():
+    global clf, updated_selected_columns, encoders  # Add encoders as global
+
     try:
         selected_columns = request.json.get('selectedColumns', [])
         target_column = request.json.get('targetColumn', None)
@@ -132,35 +154,32 @@ def decision_tree():
         if not selected_columns or not target_column:
             return jsonify({'error': 'Selected columns or target column missing'}), 400
 
-        # Tách cột target ra khỏi dữ liệu
-        target_data = dataset[target_column]  # Lưu giá trị target
-        feature_data = dataset[selected_columns]  # Dữ liệu không chứa target
+        # Prepare dataset
+        encoders = {}
+        encoded_data = dataset.copy()
 
-        # Áp dụng encoding lên feature data
-        encoded_features = pd.get_dummies(feature_data, drop_first=True)
+        # Apply LabelEncoder to selected columns only (not target column)
+        for column in selected_columns:
+            le = LabelEncoder()
+            encoded_data[column] = le.fit_transform(encoded_data[column].astype(str))
+            encoders[column] = le
 
-        # Gắn lại cột target vào dataset sau khi encoding
-        encoded_data = encoded_features.copy()
-        encoded_data[target_column] = target_data
+        # Separate features and target column (without encoding target)
+        features = encoded_data[selected_columns]
+        target = encoded_data[target_column]  # Don't apply LabelEncoder to target column here
 
-        # Xác định features và target
-        features = encoded_data.drop(columns=target_column)
-        target = encoded_data[target_column]
-
-        # Lưu danh sách cột đã được encoding
-        global updated_selected_columns, updated_target_column
-        updated_selected_columns = features.columns.tolist()
-        updated_target_column = target_column
-
-        # Huấn luyện Decision Tree
+        # Train Decision Tree
         clf = DecisionTreeClassifier()
-        clf = clf.fit(features, target)
+        clf.fit(features, target)
 
-        # Tính độ chính xác
+        # Update global selected columns
+        updated_selected_columns = selected_columns
+
+        # Calculate accuracy
         y_pred = clf.predict(features)
         accuracy = metrics.accuracy_score(target, y_pred)
 
-        # Trực quan hóa Decision Tree
+        # Visualize Decision Tree
         dot_data = StringIO()
         export_graphviz(
             clf,
@@ -168,20 +187,71 @@ def decision_tree():
             filled=True,
             rounded=True,
             special_characters=True,
-            feature_names=updated_selected_columns,
+            feature_names=features.columns,
             class_names=[str(c) for c in target.unique()],
         )
         graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-        graph_path = os.path.join(UPLOAD_FOLDER, "decision_tree.png")
-        graph.write_png(graph_path)
 
-        return jsonify({'accuracy': accuracy, 'graph': f'/static/uploads/decision_tree.png'}), 200
+        timestamp = int(time.time())
+        graph_path = os.path.join(UPLOAD_FOLDER, f"decision_tree_{timestamp}.png")
+        graph.write_png(graph_path)
+        graph_url = f'/uploads/decision_tree_{timestamp}.png'
+
+        return jsonify({'accuracy': accuracy, 'graph': graph_url}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-    
+# Route to upload new data and make predictions
+@app.route("/upload4", methods=["POST"])
+def upload4():
+    global updated_selected_columns, clf, encoders
+
+    if not updated_selected_columns or clf is None:
+        return jsonify({"error": "Model chưa được tạo. Hãy chạy bước tạo cây trước."}), 400
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file part in the request"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # Đọc file CSV
+        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+        file.save(filepath)
+
+        # Tự động phát hiện encoding
+        encoding = detect_encoding(filepath)
+        new_data = pd.read_csv(filepath, encoding=encoding)
+
+        # Apply LabelEncoder to the new data
+        encoded_new_data = new_data.copy()
+
+        for column in updated_selected_columns:
+            if column in encoders:
+                le = encoders[column]
+                # Handle unseen values by mapping them to -1
+                encoded_new_data[column] = encoded_new_data[column].map(
+                    lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                )
+            else:
+                return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
+
+        # Dự đoán kết quả
+        predictions = clf.predict(encoded_new_data[updated_selected_columns])
+        new_data["Prediction"] = predictions
+
+        # Chuyển kết quả thành bảng HTML để hiển thị
+        result_html = new_data.to_html(index=False, classes="table table-bordered")
+
+        return jsonify({"table": result_html}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # ==========================================
 # ==========================================
 # =====                               ======

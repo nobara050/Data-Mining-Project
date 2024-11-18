@@ -13,6 +13,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/chuong4.css') }}"
+    />
   </head>
   <body>
     <nav>
@@ -28,6 +32,7 @@
       </div>
     </nav>
     <div class="wrapper">
+      <h1 class="titlePage">Phân lớp thuật toán CART</h1>
       <div class="inputFile">
         <!-- Form upload file CSV -->
         <div class="btnNhapFile">
@@ -45,24 +50,43 @@
         <div id="columns-buttons-container"></div>
       </div>
       <!-- Target column selection -->
-      <div>
-        <label for="target-column">Target Column: </label>
-        <input
-          type="text"
-          id="target-column"
-          placeholder="Enter target column"
-        />
+
+      <div class="css-targer-accuracy">
+        <div class="css-for-accuracy-block">
+          <div class="css-target">
+            <span>Target Column:</span>
+            <select id="target-column">
+              <option value="" selected disabled>Chưa có data 🌈</option>
+            </select>
+            <div class="css-btnTree">
+              <button class="css-btn-tree" onclick="runDecisionTree()">
+                Run Decision Tree
+              </button>
+            </div>
+          </div>
+          <div>
+            <input
+              type="text"
+              id="accuracy-input"
+              readonly
+              placeholder="Accuracy will be shown here"
+            />
+          </div>
+        </div>
       </div>
-      <div>
-        <button onclick="runDecisionTree()">
-          <span>Run Decision Tree</span>
-        </button>
+      <div class="css-result-chuong4">
+        <div id="decision-tree-result"></div>
+      </div>
+      <div class="css-new-file-upload">
+        <h3>Tải file CSV mới để dự đoán:</h3>
+        <input
+          type="file"
+          id="new-file-upload"
+          onchange="handleFileUploadNew(event)"
+        />
+        <div id="new-prediction-table-container"></div>
       </div>
     </div>
-    <script
-      src="{{ url_for('static', filename='js/index.js') }}"
-      defer
-    ></script>
     <script
       src="{{ url_for('static', filename='js/chuong4.js') }}"
       defer

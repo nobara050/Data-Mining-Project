@@ -146,3 +146,8 @@ nav {
 #csv-upload {
   font-size: 1rem;
 }
+
+.column-btn.selected {
+  background-color: #082209; /* Green background for selected column */
+  color: white;
+}
