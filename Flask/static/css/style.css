@@ -52,15 +52,64 @@ nav {
   align-items: center;
   gap: 1rem;
 }
-.option a {
+.option li {
   padding: 0.8rem;
   font-weight: 400;
 }
 
-.option a:hover {
-  background-color: #464646;
-  color: white;
-  border-radius: 0.25rem;
+.option li:hover {
+  background-color: #1e8648;
+  a,
+  span {
+    color: white;
+  }
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.option-chuong4-absolute {
+  position: relative;
+}
+
+.option-chuong4-wrapper {
+  position: absolute;
+  bottom: -75px;
+  left: -3rem;
+  border-radius: 0 0 0.75rem 0.75rem;
+  display: none;
+}
+
+.option-chuong4-absolute:hover {
+  .option-chuong4-wrapper {
+    display: block;
+  }
+}
+
+.option-chuong4-log {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 200px;
+  max-width: 200px;
+  max-height: 75px;
+  min-height: 75px;
+  background-color: #1e8648;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+.css-bayes,
+.css-gini {
+  padding-left: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.css-gini:hover {
+  text-decoration: underline;
+  text-decoration-color: #eaecef;
+}
+
+.css-bayes:hover {
+  text-decoration: underline;
+  text-decoration-color: #eaecef;
 }
 
 /* input table */

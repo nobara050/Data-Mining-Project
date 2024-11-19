@@ -3,6 +3,7 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
+from sklearn.naive_bayes import GaussianNB
 from werkzeug.utils import secure_filename
 import chardet  # Để phát hiện encoding
 from mpl_toolkits.mplot3d import Axes3D
@@ -37,6 +38,7 @@ clf = None
 updated_selected_columns = []
 # encoders = {}
 # dataset = None
+
 # Thư mục upload
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -83,10 +85,15 @@ def chuong3_get():
     clear_uploads()  # Xóa file khi chuyển chương
     return render_template('Chuong3.html')
 
-@app.route('/chuong4', methods=['GET'])
-def chuong4_get():
+@app.route('/chuong4_gini', methods=['GET'])
+def chuong4_gini_get():
     clear_uploads()  # Xóa file khi chuyển chương
-    return render_template('Chuong4.html')
+    return render_template('Chuong4_gini.html')
+
+@app.route('/chuong4_bayes', methods=['GET'])
+def chuong4_bayes_get():
+    clear_uploads()  # Xóa file khi chuyển chương
+    return render_template('Chuong4_bayes.html')
 
 @app.route('/chuong5', methods=['GET'])
 def chuong5_get():
@@ -143,6 +150,68 @@ def upload_csv():
 # ==========================================
 
 # Route to create decision tree model
+
+@app.route('/naive_bayes', methods=['POST'])
+def naive_bayes():
+    global clf, updated_selected_columns, encoders, dataset
+
+    try:
+        # Kiểm tra dataset đã được nạp
+        if dataset is None:
+            return jsonify({'error': 'Dataset chưa được tải lên.'}), 400
+
+        # Lấy dữ liệu từ request
+        selected_columns = request.json.get('selectedColumns', [])
+        target_column = request.json.get('targetColumn', None)
+
+        # Kiểm tra dữ liệu đầu vào
+        if not selected_columns or not target_column:
+            return jsonify({'error': 'Thiếu cột đầu vào hoặc cột mục tiêu.'}), 400
+
+        # Chuẩn bị dữ liệu
+        encoders = {}
+        encoded_data = dataset.copy()
+
+        # Mã hóa các cột được chọn
+        for column in selected_columns:
+            if column not in encoded_data.columns:
+                return jsonify({'error': f'Cột {column} không tồn tại trong dataset.'}), 400
+            le = LabelEncoder()
+            encoded_data[column] = le.fit_transform(encoded_data[column].astype(str))
+            encoders[column] = le
+
+        # Tách dữ liệu thành đầu vào và đầu ra
+        if target_column not in encoded_data.columns:
+            return jsonify({'error': f'Cột mục tiêu {target_column} không tồn tại trong dataset.'}), 400
+        features = encoded_data[selected_columns]
+        target = encoded_data[target_column]
+
+        # Huấn luyện Naive Bayes
+        clf = GaussianNB()
+        clf.fit(features, target)
+
+        # Cập nhật danh sách các cột đầu vào toàn cục
+        updated_selected_columns = selected_columns
+
+        # Tính toán độ chính xác
+        y_pred = clf.predict(features)
+        accuracy = metrics.accuracy_score(target, y_pred)
+
+        # Lưu hình ảnh của cây giả lập (nếu cần tạo giả lập cây từ dữ liệu Naive Bayes)
+        graph_path = "static/naive_bayes_tree.png"
+        if os.path.exists(graph_path):
+            os.remove(graph_path)
+
+        # Không có cây Naive Bayes thực sự nhưng có thể tạo cây tương tự từ tập dữ liệu
+        # Để giả lập hiển thị trực quan
+        # (Chỉnh sửa theo cách riêng của bạn nếu cần đồ họa thực tế)
+
+        return jsonify({'accuracy': accuracy, 'graph': f"/{graph_path}"}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Lỗi xử lý: {str(e)}'}), 500
+
+
 @app.route('/decision_tree', methods=['POST'])
 def decision_tree():
     global clf, updated_selected_columns, encoders  # Add encoders as global

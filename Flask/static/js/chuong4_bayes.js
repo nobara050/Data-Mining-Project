@@ -81,28 +81,8 @@ function populateComboBox(columns) {
   });
 }
 
-function createTargetColumnDropdown(columns) {
-  const targetColumnSelect = document.getElementById("target-column");
-
-  // Clear existing options
-  targetColumnSelect.innerHTML = "";
-
-  // Add a default placeholder option
-  const placeholderOption = document.createElement("option");
-  placeholderOption.textContent = "Select target column";
-  targetColumnSelect.appendChild(placeholderOption);
-
-  // Add options for all columns
-  columns.forEach((column) => {
-    const option = document.createElement("option");
-    option.value = column;
-    option.textContent = column;
-    targetColumnSelect.appendChild(option);
-  });
-}
-
-// Handle decision tree execution
-function runDecisionTree() {
+// Gọi API Naive Bayes
+function runNaiveBayes() {
   const targetColumn = document.getElementById("target-column").value;
 
   if (!targetColumn) {
@@ -120,7 +100,7 @@ function runDecisionTree() {
     return;
   }
 
-  fetch("/decision_tree", {
+  fetch("/naive_bayes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -138,23 +118,19 @@ function runDecisionTree() {
         // Hiển thị độ chính xác trong input
         document.getElementById(
           "accuracy-input"
-        ).value = `Accuracy: ${data.accuracy}`;
+        ).value = `Accuracy: ${data.accuracy.toFixed(2)}`;
 
-        // Hiển thị hình ảnh cây quyết định
-        const decisionTreeResult = document.getElementById(
-          "decision-tree-result"
-        );
-        decisionTreeResult.innerHTML = `
-          <h3>Decision Tree Visualization:</h3>
-          <img src="${
-            data.graph
-          }?${new Date().getTime()}" alt="Decision Tree" />
+        // Không cần hiển thị cây, vì Naive Bayes không tạo cây
+        const resultContainer = document.getElementById("bayes-result");
+        resultContainer.innerHTML = `
+          <h3>Result:</h3>
+          <p>Model training completed successfully!</p>
         `;
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Có lỗi xảy ra khi đang tạo cây.");
+      alert("Có lỗi xảy ra khi chạy thuật toán Naive Bayes.");
     });
 }
 
@@ -174,52 +150,13 @@ function resetResults() {
   const accuracyInput = document.getElementById("accuracy-input");
   accuracyInput.value = "";
 
-  // Xóa nội dung kết quả hiển thị cây quyết định
-  document.getElementById("decision-tree-result").innerHTML = "";
+  // Xóa nội dung kết quả
+  const resultContainer = document.getElementById("bayes-result");
+  resultContainer.innerHTML = "";
+
+  document.getElementById("new-prediction-table-container").innerHTML = "";
 }
 
-// function handleFileUploadNew(event) {
-//   const file = event.target.files[0];
-//   if (!file) {
-//     console.log("No file selected for new prediction");
-//     alert("Chưa chọn file để dự đoán");
-//     return;
-//   }
-
-//   // Ensure that the model has been trained before making predictions
-//   if (
-//     !selectedColumns.length ||
-//     !document.getElementById("target-column").value
-//   ) {
-//     alert("Chưa tạo mô hình. Hãy chạy bước tạo cây trước.");
-//     return;
-//   }
-
-//   const formData = new FormData();
-//   formData.append("file", file);
-
-//   fetch("/upload4", {
-//     method: "POST",
-//     body: formData,
-//   })
-//     .then((response) => response.json())
-//     .then((data) => {
-//       if (data.error) {
-//         console.error("Error:", data.error);
-//         alert(data.error); // Hiển thị thông báo lỗi nếu có
-//       } else {
-//         // Display the prediction results in a table
-//         document.getElementById("new-prediction-table-container").innerHTML = `
-//           <h3>Kết quả dự đoán:</h3>
-//           ${data.table ? data.table : "Không có kết quả dự đoán"}
-//         `;
-//       }
-//     })
-//     .catch((error) => {
-//       console.error("Error uploading new file:", error);
-//       alert("Có lỗi xảy ra khi tải file dự đoán.");
-//     });
-// }
 function handleFileUploadNew(event) {
   const file = event.target.files[0];
   if (!file) {

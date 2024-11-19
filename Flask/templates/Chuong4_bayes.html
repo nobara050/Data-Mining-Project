@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 5 - Gom cụm</title>
+    <title>Chương 4 - Phân lớp</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -15,7 +15,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/chuong5.css') }}"
+      href="{{ url_for('static', filename='css/chuong4_bayes.css') }}"
     />
   </head>
   <body>
@@ -55,9 +55,8 @@
         </li>
       </ul>
     </nav>
-
     <div class="wrapper">
-      <h1 class="titlePage">Gom cụm</h1>
+      <h1 class="titlePage">Phân lớp thuật toán Naive Bayes</h1>
       <div class="inputFile">
         <!-- Form upload file CSV -->
         <div class="btnNhapFile">
@@ -74,17 +73,47 @@
         <!-- Vùng để hiển thị bảng -->
         <div id="columns-buttons-container"></div>
       </div>
-      <hr style="margin: 1rem" />
-      <div class="inputKmean">
-        <span class="titleKmean">Nhập K-mean</span>
-        <input class="numKmean" type="number" step="1" />
-        <button id="start-kmean-btn" onclick="handleKMeans()">
-          Bắt đầu gom cụm
-        </button>
+      <!-- Target column selection -->
+
+      <div class="css-targer-accuracy">
+        <div class="css-for-accuracy-block">
+          <div class="css-target">
+            <span>Target Column:</span>
+            <select id="target-column">
+              <option value="" selected disabled>Chưa có data 🌈</option>
+            </select>
+            <div class="css-btnTree">
+              <button class="css-btn-tree" onclick="runNaiveBayes()">
+                Run Naive Bayes
+              </button>
+            </div>
+          </div>
+          <div>
+            <input
+              type="text"
+              id="accuracy-input"
+              readonly
+              placeholder="Accuracy will be shown here"
+            />
+          </div>
+        </div>
       </div>
-      <div id="result" class="result-container"></div>
-      <div class="Diagram-cluster"></div>
+      <div class="css-result-chuong4">
+        <div id="bayes-result"></div>
+      </div>
+      <div class="css-new-file-upload">
+        <h3>Tải file CSV mới để dự đoán:</h3>
+        <input
+          type="file"
+          id="new-file-upload"
+          onchange="handleFileUploadNew(event)"
+        />
+        <div id="new-prediction-table-container"></div>
+      </div>
     </div>
-    <script src="{{ url_for('static', filename='js/chuong5.js') }}"></script>
+    <script
+      src="{{ url_for('static', filename='js/chuong4_bayes.js') }}"
+      defer
+    ></script>
   </body>
 </html>

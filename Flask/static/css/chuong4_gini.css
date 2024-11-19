@@ -1,0 +1,108 @@
+#accuracy-input {
+  pointer-events: none;
+  padding: 0.25rem;
+  font-size: medium;
+  font-weight: 400;
+  border-radius: 0.25rem;
+  width: 98%;
+  background: #ffffff;
+  border: 1px solid #000000;
+}
+
+.css-for-accuracy-block {
+  max-width: fit-content;
+}
+
+.css-targer-accuracy {
+  margin: 2rem;
+  margin-top: 1rem;
+}
+
+.css-target span {
+  font-size: large;
+  font-weight: 400;
+}
+
+.css-target {
+  margin-bottom: 1rem;
+  gap: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.css-btn-tree {
+  padding: 0.25rem;
+  background-color: #f3faf7;
+  font-size: medium;
+  border-radius: 0.25rem;
+  color: #046e54;
+  border: 2px solid #0e9f6e;
+}
+
+.css-btn-tree:hover {
+  background-color: #fdf2f2;
+  color: #cf3f40;
+  border: 2px solid #f05252;
+}
+
+#target-column {
+  padding: 0.3rem;
+}
+
+.css-result-chuong4 {
+  margin: 2rem;
+}
+
+#decision-tree-result {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  max-width: 1080px;
+}
+
+#decision-tree-result h3 {
+  margin: 1rem;
+}
+
+img {
+  max-width: 100%;
+}
+
+#new-prediction-table-container {
+  margin: 1rem;
+  margin-left: 0rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.css-new-file-upload {
+  margin: 1rem;
+  margin-left: 2rem;
+}
+
+#new-file-upload {
+  font-size: 1rem;
+}
+
+.css-new-file-upload h3 {
+  margin: 1rem;
+  margin-left: 0px;
+}
+
+#new-prediction-table-container table {
+  border-collapse: collapse;
+  padding: 0.5rem;
+}
+
+#new-prediction-table-container th,
+#new-prediction-table-container td {
+  padding: 0.5rem; /* Đảm bảo có khoảng cách giữa chữ và viền */
+  text-align: left; /* Điều chỉnh căn chỉnh nếu cần */
+}
+
+#new-prediction-table-container th {
+  background-color: #f2f2f2; /* Tùy chọn cho màu nền của tiêu đề */
+}
