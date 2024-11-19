@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 4 - Phân lớp</title>
+    <title>Chương 4 - Phân lớp Naive Bayes</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -57,6 +57,7 @@
     </nav>
     <div class="wrapper">
       <h1 class="titlePage">Phân lớp thuật toán Naive Bayes</h1>
+
       <div class="inputFile">
         <!-- Form upload file CSV -->
         <div class="btnNhapFile">
@@ -70,20 +71,20 @@
           <div id="table-container" class="table-container"></div>
         </div>
 
-        <!-- Vùng để hiển thị bảng -->
+        <!-- Vùng để hiển thị các cột để phân lớp -->
         <div id="columns-buttons-container"></div>
       </div>
-      <!-- Target column selection -->
 
+      <!-- Target column selection -->
       <div class="css-targer-accuracy">
         <div class="css-for-accuracy-block">
           <div class="css-target">
-            <span>Target Column:</span>
+            <span>Thuộc tính quyết định:</span>
             <select id="target-column">
               <option value="" selected disabled>Chưa có data 🌈</option>
             </select>
-            <div class="css-btnTree">
-              <button class="css-btn-tree" onclick="runNaiveBayes()">
+            <div class="css-btnRun">
+              <button class="css-btn-run" onclick="runNaiveBayes()">
                 Run Naive Bayes
               </button>
             </div>
@@ -93,14 +94,17 @@
               type="text"
               id="accuracy-input"
               readonly
-              placeholder="Accuracy will be shown here"
+              placeholder="Độ chính xác sẽ hiển thị tại đây"
             />
           </div>
         </div>
       </div>
-      <div class="css-result-chuong4">
-        <div id="bayes-result"></div>
+
+      <!-- Kết quả -->
+      <div class="css-result-bayes">
+        <div id="confusion-matrix-container"></div>
       </div>
+
       <div class="css-new-file-upload">
         <h3>Tải file CSV mới để dự đoán:</h3>
         <input

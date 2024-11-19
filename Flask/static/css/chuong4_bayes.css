@@ -30,39 +30,12 @@
   align-items: center;
 }
 
-.css-btn-tree {
-  padding: 0.25rem;
-  background-color: #f3faf7;
-  font-size: medium;
-  border-radius: 0.25rem;
-  color: #046e54;
-  border: 2px solid #0e9f6e;
-}
-
-.css-btn-tree:hover {
-  background-color: #fdf2f2;
-  color: #cf3f40;
-  border: 2px solid #f05252;
-}
-
 #target-column {
   padding: 0.3rem;
 }
 
 .css-result-chuong4 {
   margin: 2rem;
-}
-
-#decision-tree-result {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  max-width: 1080px;
-}
-
-#decision-tree-result h3 {
-  margin: 1rem;
 }
 
 img {
@@ -105,4 +78,30 @@ img {
 
 #new-prediction-table-container th {
   background-color: #f2f2f2; /* Tùy chọn cho màu nền của tiêu đề */
+}
+
+#confusion-matrix-container {
+  margin: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#confusion-matrix-container h3 {
+  margin-top: 2rem;
+}
+
+.css-btn-run {
+  padding: 0.25rem;
+  background-color: #f3faf7;
+  font-size: medium;
+  border-radius: 0.25rem;
+  color: #046e54;
+  border: 2px solid #0e9f6e;
+}
+
+.css-btn-run:hover {
+  background-color: #fdf2f2;
+  color: #cf3f40;
+  border: 2px solid #f05252;
 }

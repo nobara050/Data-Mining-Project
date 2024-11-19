@@ -6,7 +6,6 @@ function handleFileUpload(event) {
     console.log("No file selected");
     return;
   }
-
   resetResults();
   selectedColumns = [];
   const buttonsContainer = document.getElementById("columns-buttons-container");
@@ -106,7 +105,7 @@ function runDecisionTree() {
   const targetColumn = document.getElementById("target-column").value;
 
   if (!targetColumn) {
-    alert("Chưa chọn thuộc tính quyết định kìa 😢");
+    alert("Chưa chọn thuộc tính quyết định 😢");
     return;
   }
 
@@ -116,7 +115,7 @@ function runDecisionTree() {
   }
 
   if (selectedColumns.length === 0) {
-    alert("Chưa chọn thuộc tính để phân lớp kìa 😒");
+    alert("Chưa chọn thuộc tính để phân lớp 😢");
     return;
   }
 

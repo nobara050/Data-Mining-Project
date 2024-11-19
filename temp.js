@@ -1,4 +1,5 @@
-let selectedColumns = []; // Lưu trữ các cột được chọn
+let selectedColumns = []; // Biến lưu trữ các cột được chọn
+
 function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) {
@@ -32,7 +33,7 @@ function handleFileUpload(event) {
         populateComboBox(columns); // Populate ComboBox with columns
       } else if (data.error) {
         console.error("Error:", data.error);
-        alert("Lỗi không load được combobox 😢");
+        alert("Lỗi load combobox 😢");
       }
     })
     .catch((error) => {
@@ -80,41 +81,22 @@ function populateComboBox(columns) {
   });
 }
 
-function createTargetColumnDropdown(columns) {
-  const targetColumnSelect = document.getElementById("target-column");
-
-  // Clear existing options
-  targetColumnSelect.innerHTML = "";
-
-  // Add a default placeholder option
-  const placeholderOption = document.createElement("option");
-  placeholderOption.textContent = "Select target column";
-  targetColumnSelect.appendChild(placeholderOption);
-
-  // Add options for all columns
-  columns.forEach((column) => {
-    const option = document.createElement("option");
-    option.value = column;
-    option.textContent = column;
-    targetColumnSelect.appendChild(option);
-  });
-}
-
+// Gọi API Naive Bayes
 function runNaiveBayes() {
   const targetColumn = document.getElementById("target-column").value;
 
   if (!targetColumn) {
-    alert("Vui lòng chọn thuộc tính quyết định!");
-    return;
-  }
-
-  if (selectedColumns.length === 0) {
-    alert("Vui lòng chọn ít nhất một thuộc tính phân lớp!");
+    alert("Chưa chọn thuộc tính quyết định kìa 😢");
     return;
   }
 
   if (selectedColumns.includes(targetColumn)) {
-    alert("Thuộc tính quyết định không được trùng với thuộc tính phân lớp!");
+    alert("Thuộc tính quyết định không thể trùng thuộc tính phân lớp được 😢");
+    return;
+  }
+
+  if (selectedColumns.length === 0) {
+    alert("Chưa chọn thuộc tính để phân lớp kìa 😒");
     return;
   }
 
@@ -131,34 +113,25 @@ function runNaiveBayes() {
     .then((response) => response.json())
     .then((data) => {
       if (data.error) {
-        alert(`Lỗi xử lý: ${data.error}`);
-        return;
+        alert(data.error);
+      } else {
+        // Hiển thị độ chính xác trong input
+        document.getElementById(
+          "accuracy-input"
+        ).value = `Accuracy: ${data.accuracy.toFixed(2)}`;
+
+        // Không cần hiển thị cây, vì Naive Bayes không tạo cây
+        const resultContainer = document.getElementById("bayes-result");
+        resultContainer.innerHTML = `
+          <h3>Result:</h3>
+          <p>Model training completed successfully!</p>
+        `;
       }
-
-      // Hiển thị kết quả
-      document.getElementById(
-        "accuracy-input"
-      ).value = `Độ chính xác: ${data.accuracy}`;
-
-      // Hiển thị Confusion Matrix dưới dạng ảnh
-      document.getElementById("confusion-matrix-container").innerHTML = `
-            <h3>Confusion Matrix:</h3>
-            <img src="${data.confusion_matrix_image_url}" alt="Confusion Matrix Image" />
-          `;
     })
     .catch((error) => {
-      console.error("Lỗi khi xử lý Naive Bayes:", error);
-      alert("Có lỗi xảy ra khi chạy Naive Bayes!");
+      console.error("Error:", error);
+      alert("Có lỗi xảy ra khi chạy thuật toán Naive Bayes.");
     });
-}
-
-function resetResults() {
-  document.getElementById("table-container").innerHTML = "";
-  document.getElementById("columns-buttons-container").innerHTML = "";
-  document.getElementById("target-column").innerHTML = "";
-  document.getElementById("accuracy-input").value = "";
-  document.getElementById("confusion-matrix-container").innerHTML = "";
-  document.getElementById("new-prediction-table-container").innerHTML = "";
 }
 
 function handleFileUploadNew(event) {
@@ -171,7 +144,7 @@ function handleFileUploadNew(event) {
   const formData = new FormData();
   formData.append("file", file);
 
-  fetch("/upload4_bayes", {
+  fetch("/upload4", {
     method: "POST",
     body: formData,
   })
@@ -181,12 +154,39 @@ function handleFileUploadNew(event) {
         alert("File có vấn đề hoặc có lỗi xảy ra rồi 😢");
       } else {
         document.getElementById("new-prediction-table-container").innerHTML = `
-            <h3>Kết quả dự đoán:</h3>
-            ${data.table || "Không có dữ liệu"}
-          `;
+          <h3>Kết quả dự đoán:</h3>
+          ${data.table || "Không có dữ liệu"}
+        `;
       }
     })
     .catch((error) => {
       alert("Có lỗi xảy ra khi tải file dự đoán.");
     });
+}
+
+function resetResults() {
+  // Xóa nội dung bảng
+  document.getElementById("table-container").innerHTML = "";
+
+  // Xóa các nút chọn cột
+  const buttonsContainer = document.getElementById("columns-buttons-container");
+  buttonsContainer.innerHTML = "";
+
+  // Reset ComboBox cột mục tiêu
+  const targetColumnSelect = document.getElementById("target-column");
+  targetColumnSelect.innerHTML = "";
+
+  // Xóa giá trị độ chính xác
+  const accuracyInput = document.getElementById("accuracy-input");
+  accuracyInput.value = "";
+
+  // Xóa nội dung kết quả
+  const resultContainer = document.getElementById("bayes-result");
+  resultContainer.innerHTML = "";
+
+  document.getElementById("feature-x").innerHTML = "";
+  document.getElementById("feature-y").innerHTML = "";
+  document.getElementById("boundary-result").innerHTML = "";
+
+  document.getElementById("new-prediction-table-container").innerHTML = "";
 }

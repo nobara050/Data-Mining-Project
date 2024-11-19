@@ -30,13 +30,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module='matplotlib')
 
 app = Flask(__name__)
 
-
-# ================================================================================
-# ==================                                        ======================
-# ==================              CÁC HÀM PHỤ TRỢ           ======================
-# ==================                                        ======================
-# ================================================================================
-
 # Tránh lỗi Matplotlib
 def cleanup():
     import matplotlib.pyplot as plt
@@ -44,10 +37,10 @@ def cleanup():
 atexit.register(cleanup)
 
 # Biến lưu trữ cây quyết định toàn cục dùng trong chương 4
-updated_selected_columns = []
-dataset = None
-encoders = {}
 clf = None
+updated_selected_columns = []
+encoders = {}
+dataset = None
 
 # Định nghĩa đường dẫn thư mục upload
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -68,27 +61,16 @@ def favicon():
         app.static_folder, 'favicon.ico', mimetype='image/vnd.microsoft.icon'
     )
 
-
 # Upload file lên
 @app.route('/uploads/<filename>')
 def serve_upload(filename):
     upload_folder = os.path.join(app.root_path, 'uploads')
     return send_from_directory(upload_folder, filename)
 
-
-
-# ================================================================================
-# ==================                                        ======================
-# ==================        ROUTE CÁC TRANG METHOD GET      ======================
-# ==================                                        ======================
-# ================================================================================
-
-
-
 # Route cho trang chính
 @app.route('/')
 def index():
-    clear_uploads()  # Xóa file khi chuyển chương
+    clear_uploads()  # Xóa file khi chuyển trang
     return render_template('index.html')
 
 # Route cho chương 1 đến chương 5
@@ -128,23 +110,16 @@ def detect_encoding(filepath):
         result = chardet.detect(f.read())
     return result['encoding']
 
-
-# ================================================================================
-# ==================                                        ======================
-# ==================     HÀM LOAD FILE CSV LÊN ĐỂ SỬ DỤNG   ======================
-# ==================                                        ======================
-# ================================================================================
-
-# Upload file sẽ lưu lại, đọc file csv để xử lý và xóa toàn bộ file trong uploads 
-# (reset bộ nhớ chứ không mỗi lần người dùng chọn một dataset mới lưu lại sẽ tràn)
+# Upload file sẽ lưu lại, đọc file csv để xử lý
 @app.route('/upload', methods=['POST'])
 def upload_csv():
-    # Reset các biến toàn cục mỗi lần load file
-    global dataset, clf, updated_selected_columns, encoders, dataset 
-    updated_selected_columns = []
-    dataset = None
-    encoders = {}
+    global dataset, clf, updated_selected_columns, encoders, datasets # Make clf and updated_selected_columns global
+
+    # Reset model and selected columns on each upload
     clf = None
+    updated_selected_columns = []
+    encoders = {}
+    dataset = None
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -179,26 +154,22 @@ def upload_csv():
 # ==========================================
 # ==========================================
 
-# Tạo mô hình Naive bayes
+# Naive bayes
 @app.route('/naive_bayes', methods=['POST'])
 def naive_bayes():
-    # Sử dụng các biến toàn cục
-    global clf, updated_selected_columns, encoders  
+    global clf, updated_selected_columns, encoders  # Đảm bảo clf là biến toàn cục
+
     try:
-        # Thông báo các lỗi như chưa load data lên hay chưa chọn cột thuộc tính, quyết định
         if dataset is None:
             return jsonify({'error': 'Dataset is not uploaded'}), 400
-        
+
         selected_columns = request.json.get('selectedColumns', [])
         target_column = request.json.get('targetColumn', None)
 
         if not selected_columns or not target_column:
             return jsonify({'error': 'Selected columns or target column is missing'}), 400
 
-        # Các cột được chọn
-        updated_selected_columns = selected_columns 
-
-        # Label Encoding
+        # Encoding
         encoders = {}
         encoded_data = dataset.copy()
 
@@ -210,8 +181,8 @@ def naive_bayes():
         features = encoded_data[selected_columns]
         target = encoded_data[target_column]
 
-        # Train mô hình Naive Bayes
-        clf = GaussianNB()
+        # Train Naive Bayes model - Chuyển từ nb_model sang clf
+        clf = GaussianNB()  # Chỉnh lại thành clf
         clf.fit(features, target)
 
         y_pred = clf.predict(features)
@@ -240,64 +211,8 @@ def naive_bayes():
     except Exception as e:
         return jsonify({'error': f'Error training Naive Bayes model: {str(e)}'}), 500
 
-# Tải dữ liệu cần dự đoán bởi mô hình Naive Bayes
-@app.route("/upload4_bayes", methods=["POST"])
-def upload4_bayes():
-    global updated_selected_columns, clf, encoders
-
-    if not updated_selected_columns or clf is None:
-        return jsonify({"error": "Model chưa được tạo. Hãy chạy bước Naive Bayes trước."}), 400
-
-    if "file" not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        # Đọc file dữ liệu tải lên
-        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
-        file.save(filepath)
-
-        # Phát hiện encoding
-        encoding = detect_encoding(filepath)
-        new_data = pd.read_csv(filepath, encoding=encoding)
-
-        # Encode data mới
-        encoded_new_data = new_data.copy()
-
-        for column in updated_selected_columns:
-            if column in encoders:
-                le = encoders[column]
-                encoded_new_data[column] = encoded_new_data[column].map(
-                    lambda x: le.transform([x])[0] if x in le.classes_ else -1
-                )
-            else:
-                return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
-
-        # Tiến hành dự đoán
-        predictions = clf.predict(encoded_new_data[updated_selected_columns])
-        new_data["Prediction"] = predictions
-
-        # Convert predictions back to original labels if necessary
-        target_column = list(encoders.keys())[-1]  # Lấy cột mục tiêu
-        if target_column in encoders:
-            target_encoder = encoders[target_column]
-            new_data["Prediction"] = new_data["Prediction"].map(
-                lambda x: target_encoder.inverse_transform([x])[0]
-            )
-
-        # Xuất ra HTML
-        result_html = new_data.to_html(index=False, classes="table table-bordered")
-
-        return jsonify({"table": result_html}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
-# Tạo mô hình Decision Tree
 @app.route('/decision_tree', methods=['POST'])
 def decision_tree():
     global clf, updated_selected_columns, encoders  # Add encoders as global
@@ -362,7 +277,7 @@ def decision_tree():
         return jsonify({'error': str(e)}), 500
 
 
-# Tải dữ liệu cần dự đoán bởi mô hình Naive Bayes
+# Route to upload new data and make predictions
 @app.route("/upload4", methods=["POST"])
 def upload4():
     global updated_selected_columns, clf, encoders
