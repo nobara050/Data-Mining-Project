@@ -1,4 +1,5 @@
 let selectedColumns = []; // Lưu trữ các cột được chọn
+
 function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) {
@@ -178,7 +179,8 @@ function handleFileUploadNew(event) {
     .then((response) => response.json())
     .then((data) => {
       if (data.error) {
-        alert("File có vấn đề hoặc có lỗi xảy ra rồi 😢");
+        alert(data.error);
+        // File có vấn đề hoặc có lỗi xảy ra rồi 😢
       } else {
         document.getElementById("new-prediction-table-container").innerHTML = `
             <h3>Kết quả dự đoán:</h3>

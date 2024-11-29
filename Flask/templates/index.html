@@ -63,6 +63,24 @@
       >
         <h3 class="intro">Chào mừng đến với Data Mining</h3>
         <p class="intro">Chọn một tùy chọn từ thanh điều hướng để bắt đầu.</p>
+
+        <button id="exitBtn">Tắt chương trình</button>
+
+        <script>
+          document
+            .getElementById("exitBtn")
+            .addEventListener("click", function () {
+              // Gửi request tới Flask để dừng chương trình
+              fetch("/exit", { method: "POST" })
+                .then((response) => {
+                  console.log("Exiting program...");
+                  window.close(); // Đóng tab
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                });
+            });
+        </script>
       </div>
     </div>
   </body>

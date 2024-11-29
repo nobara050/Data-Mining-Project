@@ -1,0 +1,8 @@
+conda install -c conda-forge graphviz
+conda install -c conda-forge pydotplus
+pip install seaborn
+pip install graphviz
+pip install pydotplus
+conda env create -f environment.yml -n doanmining
+conda activate doanmining
+conda update scikit-learn numpy

@@ -190,7 +190,7 @@ function handleFileUploadNew(event) {
   const formData = new FormData();
   formData.append("file", file);
 
-  fetch("/upload4", {
+  fetch("/upload4_decision", {
     method: "POST",
     body: formData,
   })

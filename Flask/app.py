@@ -25,6 +25,8 @@ import base64
 import time
 import json
 import os
+
+os.environ['OMP_NUM_THREADS'] = '1'
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='matplotlib')
 
@@ -44,10 +46,10 @@ def cleanup():
 atexit.register(cleanup)
 
 # Biến lưu trữ cây quyết định toàn cục dùng trong chương 4
-updated_selected_columns = []
+selected_columns = []
 dataset = None
 encoders = {}
-clf = None
+model = None
 
 # Định nghĩa đường dẫn thư mục upload
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -140,11 +142,11 @@ def detect_encoding(filepath):
 @app.route('/upload', methods=['POST'])
 def upload_csv():
     # Reset các biến toàn cục mỗi lần load file
-    global dataset, clf, updated_selected_columns, encoders, dataset 
-    updated_selected_columns = []
+    global dataset, model, selected_columns, encoders, dataset 
+    selected_columns = []
     dataset = None
     encoders = {}
-    clf = None
+    model = None
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -183,20 +185,18 @@ def upload_csv():
 @app.route('/naive_bayes', methods=['POST'])
 def naive_bayes():
     # Sử dụng các biến toàn cục
-    global clf, updated_selected_columns, encoders  
+    global model, selected_columns, encoders  
+
     try:
         # Thông báo các lỗi như chưa load data lên hay chưa chọn cột thuộc tính, quyết định
         if dataset is None:
             return jsonify({'error': 'Dataset is not uploaded'}), 400
-        
+
         selected_columns = request.json.get('selectedColumns', [])
         target_column = request.json.get('targetColumn', None)
 
         if not selected_columns or not target_column:
             return jsonify({'error': 'Selected columns or target column is missing'}), 400
-
-        # Các cột được chọn
-        updated_selected_columns = selected_columns 
 
         # Label Encoding
         encoders = {}
@@ -211,10 +211,11 @@ def naive_bayes():
         target = encoded_data[target_column]
 
         # Train mô hình Naive Bayes
-        clf = GaussianNB()
-        clf.fit(features, target)
+        model = GaussianNB()
+        model.fit(features, target)
 
-        y_pred = clf.predict(features)
+        # Do dữ liệu không lớn nên không slit ra train và test mà test lại trực tiếp trên dữ liệu gốc
+        y_pred = model.predict(features)
         accuracy = accuracy_score(target, y_pred)
         cm = metrics.confusion_matrix(target, y_pred)
 
@@ -223,29 +224,31 @@ def naive_bayes():
         plt.figure(figsize=(8, 6))
         sns.heatmap(cm_df, annot=True, cmap="Blues", fmt="d", cbar=False)
 
-        # Lưu ảnh vào thư mục uploads
+        # Lưu ảnh vào thư mục uploads với timestamp
         uploads_dir = os.path.join(app.root_path, 'uploads')
         if not os.path.exists(uploads_dir):
             os.makedirs(uploads_dir)
 
-        cm_image_path = os.path.join(uploads_dir, 'confusion_matrix.png')
+        timestamp = int(time.time())  # Lấy timestamp hiện tại
+        cm_image_path = os.path.join(uploads_dir, f'confusion_matrix_{timestamp}.png')
         plt.savefig(cm_image_path)
         plt.close()
-
+        
         # Trả về URL của ảnh đã lưu
-        cm_image_url = f'/uploads/confusion_matrix.png'
+        cm_image_url = f'/uploads/confusion_matrix_{timestamp}.png'
 
         return jsonify({'accuracy': accuracy, 'confusion_matrix_image_url': cm_image_url}), 200
 
     except Exception as e:
         return jsonify({'error': f'Error training Naive Bayes model: {str(e)}'}), 500
 
+
 # Tải dữ liệu cần dự đoán bởi mô hình Naive Bayes
 @app.route("/upload4_bayes", methods=["POST"])
 def upload4_bayes():
-    global updated_selected_columns, clf, encoders
+    global selected_columns, model, encoders
 
-    if not updated_selected_columns or clf is None:
+    if not selected_columns or model is None:
         return jsonify({"error": "Model chưa được tạo. Hãy chạy bước Naive Bayes trước."}), 400
 
     if "file" not in request.files:
@@ -262,34 +265,46 @@ def upload4_bayes():
 
         # Phát hiện encoding
         encoding = detect_encoding(filepath)
-        new_data = pd.read_csv(filepath, encoding=encoding)
+        predict_data = pd.read_csv(filepath, encoding=encoding)
 
-        # Encode data mới
-        encoded_new_data = new_data.copy()
+        # Encode data mới, chia ra làm 2 data để lát in ra kết quả không bị encoded
+        encoded_predict_data = predict_data.copy()
 
-        for column in updated_selected_columns:
+        for column in selected_columns:
             if column in encoders:
                 le = encoders[column]
-                encoded_new_data[column] = encoded_new_data[column].map(
+                encoded_predict_data[column] = encoded_predict_data[column].map(
                     lambda x: le.transform([x])[0] if x in le.classes_ else -1
                 )
             else:
                 return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
+        
+        # Tiến hành dự đoán
+        # predictions = model.predict(encoded_predict_data[selected_columns])
+        # predict_data["Prediction"] = predictions
+
+        # Thêm các xác suất dự đoán vào bảng predict_data
+        if hasattr(model, "predict_proba"):  # Kiểm tra xem mô hình có hỗ trợ phương thức predict_proba không
+            probabilities = model.predict_proba(encoded_predict_data[selected_columns])
+            class_names = encoders[list(encoders.keys())[-1]].classes_  # Tên các lớp từ encoder
+            for i, class_name in enumerate(class_names):
+                predict_data[f"Probability_{class_name}"] = probabilities[:, i]
 
         # Tiến hành dự đoán
-        predictions = clf.predict(encoded_new_data[updated_selected_columns])
-        new_data["Prediction"] = predictions
+        predictions = model.predict(encoded_predict_data[selected_columns])
+        predict_data["Prediction"] = predictions
 
-        # Convert predictions back to original labels if necessary
+        # Đưa dữ liệu dự đoán về dạng trước khi encoded
         target_column = list(encoders.keys())[-1]  # Lấy cột mục tiêu
         if target_column in encoders:
             target_encoder = encoders[target_column]
-            new_data["Prediction"] = new_data["Prediction"].map(
+            predict_data["Prediction"] = predict_data["Prediction"].map(
                 lambda x: target_encoder.inverse_transform([x])[0]
             )
 
+
         # Xuất ra HTML
-        result_html = new_data.to_html(index=False, classes="table table-bordered")
+        result_html = predict_data.to_html(index=False, classes="table table-bordered")
 
         return jsonify({"table": result_html}), 200
 
@@ -300,7 +315,7 @@ def upload4_bayes():
 # Tạo mô hình Decision Tree
 @app.route('/decision_tree', methods=['POST'])
 def decision_tree():
-    global clf, updated_selected_columns, encoders  # Add encoders as global
+    global model, selected_columns, encoders 
 
     try:
         selected_columns = request.json.get('selectedColumns', [])
@@ -327,21 +342,18 @@ def decision_tree():
         features = encoded_data
         target = target_data
 
-        # Train Decision Tree
-        clf = DecisionTreeClassifier()
-        clf.fit(features, target)
+        # Train mô hình Decision Tree
+        model = DecisionTreeClassifier()
+        model.fit(features, target)
 
-        # Update global selected columns
-        updated_selected_columns = selected_columns
-
-        # Calculate accuracy
-        y_pred = clf.predict(features)
+        # Do dữ liệu không lớn nên không slit ra train và test mà test lại trực tiếp trên dữ liệu gốc
+        y_pred = model.predict(features)
         accuracy = metrics.accuracy_score(target, y_pred)
 
-        # Visualize Decision Tree
+        # Tạo ảnh cây 
         dot_data = StringIO()
         export_graphviz(
-            clf,
+            model,
             out_file=dot_data,
             filled=True,
             rounded=True,
@@ -362,12 +374,12 @@ def decision_tree():
         return jsonify({'error': str(e)}), 500
 
 
-# Tải dữ liệu cần dự đoán bởi mô hình Naive Bayes
-@app.route("/upload4", methods=["POST"])
-def upload4():
-    global updated_selected_columns, clf, encoders
+# Tải dữ liệu cần dự đoán bởi mô hình Decision Tree
+@app.route("/upload4_decision", methods=["POST"])
+def upload4_decision():
+    global selected_columns, model, encoders
 
-    if not updated_selected_columns or clf is None:
+    if not selected_columns or model is None:
         return jsonify({"error": "Model chưa được tạo. Hãy chạy bước tạo cây trước."}), 400
 
     if "file" not in request.files:
@@ -384,27 +396,27 @@ def upload4():
 
         # Tự động phát hiện encoding
         encoding = detect_encoding(filepath)
-        new_data = pd.read_csv(filepath, encoding=encoding)
+        predict_data = pd.read_csv(filepath, encoding=encoding)
 
         # Apply LabelEncoder to the new data
-        encoded_new_data = new_data.copy()
+        encoded_predict_data = predict_data.copy()
 
-        for column in updated_selected_columns:
+        for column in selected_columns:
             if column in encoders:
                 le = encoders[column]
                 # Handle unseen values by mapping them to -1
-                encoded_new_data[column] = encoded_new_data[column].map(
+                encoded_predict_data[column] = encoded_predict_data[column].map(
                     lambda x: le.transform([x])[0] if x in le.classes_ else -1
                 )
             else:
                 return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
 
         # Dự đoán kết quả
-        predictions = clf.predict(encoded_new_data[updated_selected_columns])
-        new_data["Prediction"] = predictions
+        predictions = model.predict(encoded_predict_data[selected_columns])
+        predict_data["Prediction"] = predictions
 
         # Chuyển kết quả thành bảng HTML để hiển thị
-        result_html = new_data.to_html(index=False, classes="table table-bordered")
+        result_html = predict_data.to_html(index=False, classes="table table-bordered")
 
         return jsonify({"table": result_html}), 200
 
@@ -420,15 +432,17 @@ def upload4():
 # ==========================================
 
 # Khi bấm nút Gom cụm trong chương 5
+from sklearn.decomposition import PCA
+
 @app.route('/chuong5', methods=['POST'])
 def chuong5():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
     file = request.files['file']
-    k = request.form.get('k', 3)  # Default K = 3 if not provided
-    columns = request.form.get('columns', '[]')  # Get selected columns as a JSON string
-    selected_columns = json.loads(columns)  # Convert JSON string into Python list
+    k = request.form.get('k', 3)  # Mặc định K = 3 nếu không được cung cấp
+    columns = request.form.get('columns', '[]')  # Lấy các cột được chọn dưới dạng chuỗi JSON
+    selected_columns = json.loads(columns)  # Chuyển chuỗi JSON thành danh sách Python
 
     try:
         k = int(k)
@@ -439,71 +453,83 @@ def chuong5():
         return jsonify({'error': 'Invalid file format'}), 400
 
     try:
-        # Save the file and detect encoding
+        # Lưu file và phát hiện mã hóa
         filepath = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
         file.save(filepath)
         encoding = detect_encoding(filepath)
 
-        # Read CSV file with detected encoding
+        # Đọc file CSV với mã hóa đã phát hiện
         df = pd.read_csv(filepath, encoding=encoding)
 
-        # Filter selected columns
+        # Lọc các cột đã chọn
         if selected_columns:
             df = df[selected_columns]
 
-        # Apply KMeans clustering
+        # Áp dụng phân cụm KMeans
         if k > len(df):
             return jsonify({'error': 'K cannot exceed the number of rows'}), 400
 
-        features = df.iloc[:, :]  # Use all columns after filtering
+        features = df.iloc[:, :]  # Sử dụng tất cả các cột sau khi lọc
         kmeans = KMeans(n_clusters=k, random_state=42)
         df['Cluster'] = kmeans.fit_predict(features)
 
-        # Prepare result data
-        cluster_result = []
-        clusters = [f"Cụm {i+1}" for i in range(k)]
-        elements = df.index.tolist()  # Get the index (row numbers) of each element
+        # Giảm chiều dữ liệu xuống 2D bằng PCA
+        pca = PCA(n_components=2)
+        pca_components = pca.fit_transform(features)  # Giảm chiều dữ liệu
+        df['PCA1'] = pca_components[:, 0]  # Thành phần chính 1
+        df['PCA2'] = pca_components[:, 1]  # Thành phần chính 2
 
-        # For each cluster, collect the row numbers of elements in that cluster
+        # Chuẩn bị dữ liệu kết quả
+        cluster_result = []
+        clusters = [f"Cụm {i+1}" for i in range(k)]  # Tạo tên các cụm
+        elements = df.index.tolist()  # Lấy danh sách chỉ mục (số dòng) của từng phần tử
+
+        # Đối với mỗi cụm, thu thập các chỉ mục dòng của các phần tử trong cụm đó
         for cluster in range(k):
             cluster_row = [
-                df.index[i] + 1  # Add 1 to the row index to match the 1-based numbering when exporting
+                df.index[i] + 1  # Thêm 1 vào chỉ mục dòng để tương ứng với số dòng bắt đầu từ 1 khi xuất dữ liệu
                 for i in range(len(df)) if df.iloc[i]['Cluster'] == cluster
             ]
             cluster_result.append(cluster_row)
 
-        # Create 2D scatter plot
+        # Tạo biểu đồ phân tán 2D
         fig, ax = plt.subplots(figsize=(10, 8))
 
-        # Plot each cluster with a different color
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # You can add more colors as needed
+        # Vẽ từng cụm với màu sắc khác nhau
+        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']  # Bạn có thể thêm nhiều màu hơn nếu cần
         for cluster in range(k):
             cluster_data = df[df["Cluster"] == cluster]
-            ax.scatter(cluster_data[selected_columns[0]], cluster_data[selected_columns[1]],
+            ax.scatter(cluster_data['PCA1'], cluster_data['PCA2'],
                        label=f"Cụm {cluster + 1}", c=colors[cluster % len(colors)], s=100)
 
-        # Labels and legend
-        ax.set_xlabel(selected_columns[0])
-        ax.set_ylabel(selected_columns[1])
+        # Thêm nhãn và chú thích
+        ax.set_xlabel('PCA1')
+        ax.set_ylabel('PCA2')
         plt.legend()
-        plt.title('KMeans Clustering - 2D Plot')
+        plt.title('KMeans Clustering - 2D Plot (PCA)')
 
-        # Save the plot to a BytesIO object
+        # Lưu biểu đồ vào đối tượng BytesIO
         img_io = BytesIO()
         plt.savefig(img_io, format='png')
         img_io.seek(0)
 
-        # Convert image to base64
+        # Chuyển đổi ảnh sang định dạng base64
         img_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
 
         return jsonify({
-            'clusters': clusters,
-            'data': cluster_result,  # Return the row indices of elements in each cluster (1-based)
-            'image': img_base64  # Send the image as a base64 string
+            'clusters': clusters,  # Trả về tên các cụm
+            'data': cluster_result,  # Trả về các chỉ mục dòng của các phần tử trong mỗi cụm (dựa trên chỉ mục bắt đầu từ 1)
+            'image': img_base64  # Gửi ảnh dưới dạng chuỗi base64
         }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# Endpoint xử lý khi nhấn nút
+@app.route("/exit", methods=["POST"])
+def exit_program():
+    print("Exiting program gracefully...")
+    os._exit(0)  # Dừng Flask server và toàn bộ chương trình
 
 
 if __name__ == '__main__':
