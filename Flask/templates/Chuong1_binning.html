@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chương 1 - Binning</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
+    />
+  </head>
+  <body>
+    <nav>
+      <div class="logo">
+        <a href="/">DATA-MINING</a>
+      </div>
+      <ul class="option">
+        <li class="option-chuong4-absolute">
+          <span>Tiền xử lý</span>
+          <div class="option-chuong4-wrapper">
+            <div class="option-chuong4-log">
+              <div class="css-gini">
+                <a href="/chuong1_pearson"><span>Tính độ tương quan</span></a>
+              </div>
+              <div class="css-bayes">
+                <a href="/chuong1_binning"><span>Binning</span></a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <a href="/chuong2">Tập phổ biến</a>
+        </li>
+        <li>
+          <a href="/chuong3">Tập thô</a>
+        </li>
+        <li class="option-chuong4-absolute">
+          <span>Phân lớp</span>
+          <div class="option-chuong4-wrapper">
+            <div class="option-chuong4-log">
+              <div class="css-gini">
+                <a href="/chuong4_gini">
+                  <span>Thuật toán Gini Cart</span>
+                </a>
+              </div>
+              <div class="css-bayes">
+                <a href="/chuong4_bayes">
+                  <span>Thuật toán Naive Bayes</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <a href="/chuong5">Gom cụm</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="wrapper">
+      <div class="content">
+        <h1 class="titlePage">Binning</h1>
+
+        <div id="binning-section">
+          <h2>Binning: Nhập dữ liệu và thực hiện binning</h2>
+
+          <!-- Trường nhập dữ liệu -->
+          <label for="binning-input"
+            >Nhập dữ liệu (mỗi giá trị cách nhau bằng dấu phẩy):</label
+          ><br />
+          <textarea
+            id="binning-input"
+            placeholder="Ví dụ: 1, 2, 3, 4, 5, 6, 7, 8, 9"
+            rows="5"
+            style="width: 100%; font-size: 16px"
+          ></textarea
+          ><br /><br />
+
+          <button onclick="performBinning()">Thực hiện Binning</button>
+
+          <h3>Kết quả Binning</h3>
+          <div id="binning-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Hàm thực hiện binning sau khi người dùng nhập dữ liệu
+      function performBinning() {
+        const inputData = document.getElementById("binning-input").value;
+
+        if (!inputData) {
+          alert("Vui lòng nhập dữ liệu.");
+          return;
+        }
+
+        // Tách dữ liệu từ chuỗi nhập vào và chuyển thành mảng số
+        const values = inputData
+          .split(",")
+          .map((value) => parseFloat(value.trim()))
+          .filter((value) => !isNaN(value));
+
+        if (values.length === 0) {
+          alert("Dữ liệu không hợp lệ. Vui lòng nhập các giá trị số.");
+          return;
+        }
+
+        // Tính toán số lượng bins tự động
+        const binCount = Math.ceil(Math.sqrt(values.length)); // Cách tính phổ biến: căn bậc 2 của số lượng dữ liệu
+
+        // Chia dữ liệu thành các bins
+        const bins = binData(values, binCount);
+
+        // Hiển thị kết quả binning
+        displayBinningResult(bins);
+      }
+
+      // Chia dữ liệu thành các bins
+      function binData(data, numBins) {
+        data.sort((a, b) => a - b); // Sắp xếp dữ liệu theo thứ tự tăng dần
+        const bins = Array(numBins)
+          .fill()
+          .map(() => []); // Tạo mảng các bins
+
+        const binSize = Math.ceil(data.length / numBins); // Tính kích thước bin
+        for (let i = 0; i < data.length; i++) {
+          bins[Math.floor(i / binSize)].push(data[i]); // Chia dữ liệu vào các bins
+        }
+        return bins;
+      }
+
+      // Hiển thị kết quả binning
+      function displayBinningResult(bins) {
+        const resultDiv = document.getElementById("binning-result");
+        resultDiv.innerHTML = ""; // Clear previous content
+
+        bins.forEach((bin, index) => {
+          const binDiv = document.createElement("div");
+          binDiv.innerHTML = `<strong>Bin ${index + 1}:</strong> ${bin.join(
+            ", "
+          )}`;
+          resultDiv.appendChild(binDiv);
+        });
+      }
+    </script>
+  </body>
+</html>

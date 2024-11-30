@@ -94,10 +94,15 @@ def index():
     return render_template('index.html')
 
 # Route cho chương 1 đến chương 5
-@app.route('/chuong1', methods=['GET'])
-def chuong1_get():
+@app.route('/chuong1_pearson', methods=['GET'])
+def chuong1_peaerson_get():
     clear_uploads()  # Xóa file khi chuyển chương
-    return render_template('Chuong1.html')
+    return render_template('Chuong1_pearson.html')
+
+@app.route('/chuong1_binning', methods=['GET'])
+def chuong1_binning_get():
+    clear_uploads()  # Xóa file khi chuyển chương
+    return render_template('Chuong1_binning.html')
 
 @app.route('/chuong2', methods=['GET'])
 def chuong2_get():

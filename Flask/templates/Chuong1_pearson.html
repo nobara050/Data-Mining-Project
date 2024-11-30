@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chương 1 - Tính Độ Tương Quan</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <nav>
+      <div class="logo">
+        <a href="/">DATA-MINING</a>
+      </div>
+      <ul class="option">
+        <li class="option-chuong4-absolute">
+          <span>Tiền xử lý</span>
+          <div class="option-chuong4-wrapper">
+            <div class="option-chuong4-log">
+              <div class="css-gini">
+                <a href="/chuong1_pearson"><span>Tính độ tương quan</span></a>
+              </div>
+              <div class="css-bayes">
+                <a href="/chuong1_binning"><span>Binning</span></a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <a href="/chuong2">Tập phổ biến</a>
+        </li>
+        <li>
+          <a href="/chuong3">Tập thô</a>
+        </li>
+        <li class="option-chuong4-absolute">
+          <span>Phân lớp</span>
+          <div class="option-chuong4-wrapper">
+            <div class="option-chuong4-log">
+              <div class="css-gini">
+                <a href="/chuong4_gini">
+                  <span>Thuật toán Gini Cart</span>
+                </a>
+              </div>
+              <div class="css-bayes">
+                <a href="/chuong4_bayes">
+                  <span>Thuật toán Naive Bayes</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <a href="/chuong5">Gom cụm</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="wrapper">
+      <div class="content">
+        <h1 class="titlePage">Tính Độ Tương Quan</h1>
+
+        <div id="correlation-section">
+          <h2>Chọn file CSV và tính độ tương quan giữa hai thuộc tính</h2>
+          <input
+            type="file"
+            id="file-input"
+            accept=".csv, .xlsx"
+            required
+          /><br /><br />
+          <div id="csv-table-container"></div>
+
+          <label for="column1">Chọn thuộc tính đầu tiên:</label>
+          <select id="column1" required></select
+          ><br /><br />
+
+          <label for="column2">Chọn thuộc tính thứ hai:</label>
+          <select id="column2" required></select
+          ><br /><br />
+
+          <button onclick="calculateCorrelation()">Tính độ tương quan</button>
+
+          <div id="result"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let csvData = [];
+      let columns = [];
+
+      // Đọc file CSV và cập nhật các cột, đồng thời hiển thị dữ liệu dưới dạng bảng
+      document
+        .getElementById("file-input")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+          if (file) {
+            if (file.name.endsWith(".csv")) {
+              Papa.parse(file, {
+                complete: function (result) {
+                  csvData = result.data;
+                  columns = Object.keys(csvData[0]);
+                  updateColumnOptions();
+                  displayCsvTable();
+                },
+                header: true,
+              });
+            } else if (file.name.endsWith(".xlsx")) {
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: "binary" });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                csvData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                columns = Object.keys(csvData[0]);
+                updateColumnOptions();
+                displayCsvTable();
+              };
+              reader.readAsBinaryString(file);
+            }
+          }
+        });
+
+      // Hiển thị dữ liệu CSV dưới dạng bảng HTML
+      function displayCsvTable() {
+        const tableContainer = document.getElementById("csv-table-container");
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+
+        const headerRow = document.createElement("tr");
+        columns.forEach((column) => {
+          const th = document.createElement("th");
+          th.textContent = column;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        csvData.forEach((row) => {
+          const tr = document.createElement("tr");
+          columns.forEach((column) => {
+            const td = document.createElement("td");
+            td.textContent = row[column];
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.innerHTML = "";
+        tableContainer.appendChild(table);
+      }
+
+      // Cập nhật các cột trong dropdown
+      function updateColumnOptions() {
+        const column1Select = document.getElementById("column1");
+        const column2Select = document.getElementById("column2");
+
+        column1Select.innerHTML = "";
+        column2Select.innerHTML = "";
+
+        columns.forEach((column) => {
+          const option1 = document.createElement("option");
+          option1.value = column;
+          option1.textContent = column;
+          column1Select.appendChild(option1);
+
+          const option2 = document.createElement("option");
+          option2.value = column;
+          option2.textContent = column;
+          column2Select.appendChild(option2);
+        });
+      }
+
+      // Tính độ tương quan Pearson
+      function calculateCorrelation() {
+        const column1 = document.getElementById("column1").value;
+        const column2 = document.getElementById("column2").value;
+
+        if (!column1 || !column2) {
+          alert("Vui lòng chọn hai cột để tính độ tương quan.");
+          return;
+        }
+
+        const data1 = csvData
+          .map((row) => parseFloat(row[column1]))
+          .filter((value) => !isNaN(value));
+        const data2 = csvData
+          .map((row) => parseFloat(row[column2]))
+          .filter((value) => !isNaN(value));
+
+        if (data1.length !== data2.length) {
+          alert("Hai cột phải có số lượng giá trị giống nhau.");
+          return;
+        }
+
+        const correlation = pearsonCorrelation(data1, data2);
+
+        document.getElementById(
+          "result"
+        ).innerHTML = `<strong>Độ tương quan:</strong> ${correlation.toFixed(
+          4
+        )}`;
+      }
+
+      function pearsonCorrelation(arr1, arr2) {
+        const n = arr1.length;
+        const sum1 = arr1.reduce((a, b) => a + b, 0);
+        const sum2 = arr2.reduce((a, b) => a + b, 0);
+        const sum1Sq = arr1.reduce((a, b) => a + b * b, 0);
+        const sum2Sq = arr2.reduce((a, b) => a + b * b, 0);
+        const pSum = arr1.reduce((a, b, i) => a + b * arr2[i], 0);
+
+        const num = pSum - (sum1 * sum2) / n;
+        const den = Math.sqrt(
+          (sum1Sq - (sum1 * sum1) / n) * (sum2Sq - (sum2 * sum2) / n)
+        );
+
+        return num / den;
+      }
+    </script>
+  </body>
+</html>
