@@ -103,6 +103,21 @@
 
           <h3>Tập Phổ Biến Tối Đại</h3>
           <div id="max-frequent-itemsets-result"></div>
+
+          <h3>Nhập Độ Tin Cậy Tối Thiểu (min_conf từ 0 đến 1)</h3>
+          <input
+            type="number"
+            id="min-conf"
+            min="0"
+            max="1"
+            step="0.1"
+            style="width: 100px; height: 30px; font-size: 18px"
+          />
+
+          <button onclick="findAssociationRules()">Tìm Các Luật Kết Hợp</button>
+
+          <h3>Các Luật Kết Hợp</h3>
+          <div id="association-rules-result"></div>
         </div>
       </div>
     </div>
@@ -236,7 +251,7 @@
         Object.keys(itemCounts).forEach((item) => {
           const support = itemCounts[item] / totalTransactions;
           if (support >= minSup) {
-            frequentItemsets.push([item]);
+            frequentItemsets.push([item]); // Lưu lại các tập phổ biến đơn lẻ
           }
         });
 
@@ -383,6 +398,138 @@
         itemsets.forEach((itemset) => {
           const li = document.createElement("li");
           li.innerText = `[${itemset.join(", ")}]`;
+          ul.appendChild(li);
+        });
+
+        resultDiv.appendChild(ul);
+      }
+
+      function findAssociationRules() {
+        const minConf = parseFloat(document.getElementById("min-conf").value);
+        const minSup = parseFloat(document.getElementById("min-sup").value);
+
+        if (isNaN(minConf) || minConf < 0 || minConf > 1) {
+          alert("Vui lòng nhập min_conf từ 0 đến 1.");
+          return;
+        }
+
+        // Lấy tập phổ biến từ thuật toán Apriori
+        if (isNaN(minSup) || minSup < 0 || minSup > 1) {
+          alert("Vui lòng nhập min_sup từ 0 đến 1.");
+          return;
+        }
+
+        const itemsets = aprioriAlgorithm(transactions, minSup);
+
+        // Tạo các luật kết hợp từ các tập phổ biến
+        const associationRules = generateAssociationRules(
+          itemsets,
+          minConf,
+          minSup
+        );
+
+        // Hiển thị các luật kết hợp
+        displayAssociationRules(associationRules);
+      }
+
+      function generateAssociationRules(itemsets, minConf, minSup) {
+        const rules = [];
+
+        // Duyệt qua từng itemset
+        itemsets.forEach((itemset) => {
+          // Chỉ tạo luật với các itemset có từ 2 phần tử trở lên
+          if (itemset.length < 2) return;
+
+          // Tạo các luật kết hợp (X -> Y) từ itemset
+          for (let i = 1; i < itemset.length; i++) {
+            const subsets = getSubsets(itemset, i); // Lấy tất cả các tập con với kích thước i
+            subsets.forEach((antecedent) => {
+              // Phần còn lại của luật sẽ là (itemset - antecedent)
+              const consequent = itemset.filter(
+                (item) => !antecedent.includes(item)
+              );
+
+              // Nếu antecedent và consequent đều không rỗng
+              if (antecedent.length > 0 && consequent.length > 0) {
+                const supportX = calculateSupport(antecedent); // Tính support của antecedent
+                const supportXY = calculateSupport(
+                  antecedent.concat(consequent)
+                ); // Tính support của toàn bộ itemset
+
+                // Tính confidence của luật (antecedent -> consequent)
+                const confidence = supportXY / supportX;
+
+                // Kiểm tra nếu confidence >= minConf và supportXY >= minSup
+                if (confidence >= minConf && supportXY >= minSup) {
+                  rules.push({
+                    antecedent: antecedent,
+                    consequent: consequent,
+                    confidence: confidence,
+                    support: supportXY,
+                  });
+                }
+              }
+            });
+          }
+        });
+
+        return rules; // Trả về các luật thỏa mãn điều kiện
+      }
+
+      // Hàm lấy tất cả các tập con hợp lệ của một tập
+      function getSubsets(itemset, size) {
+        const subsets = [];
+        const subsetGenerator = (arr, n, index, data, i) => {
+          if (index === size) {
+            subsets.push(data.slice(0, size));
+            return;
+          }
+          if (i >= arr.length) return;
+          data[index] = arr[i];
+          subsetGenerator(arr, n, index + 1, data, i + 1);
+          subsetGenerator(arr, n, index, data, i + 1);
+        };
+        subsetGenerator(itemset, itemset.length, 0, [], 0);
+        return subsets;
+      }
+
+      function calculateSupport(itemset) {
+        const totalTransactions = transactions.length;
+        let count = 0;
+        transactions.forEach((transaction) => {
+          if (isSubset(itemset, transaction)) {
+            count++;
+          }
+        });
+        return count / totalTransactions; // Đảm bảo tính đúng tỷ lệ support
+      }
+
+      // Hàm kiểm tra một tập con là một phần của một giao dịch
+      function isSubset(itemset, transaction) {
+        return itemset.every((item) => transaction.includes(item));
+      }
+
+      // Hàm hiển thị các luật kết hợp
+      function displayAssociationRules(rules) {
+        const resultDiv = document.getElementById("association-rules-result");
+        resultDiv.innerHTML = "";
+
+        if (rules.length === 0) {
+          resultDiv.innerHTML =
+            "<p>Không tìm thấy luật kết hợp nào thỏa mãn điều kiện độ tin cậy.</p>";
+          return;
+        }
+
+        const ul = document.createElement("ul");
+        rules.forEach((rule) => {
+          const li = document.createElement("li");
+          li.innerText = `Luật: {${rule.antecedent.join(
+            ", "
+          )}} -> {${rule.consequent.join(
+            ", "
+          )}} | Confidence: ${rule.confidence.toFixed(
+            2
+          )} | Support: ${rule.support.toFixed(2)}`;
           ul.appendChild(li);
         });
 
