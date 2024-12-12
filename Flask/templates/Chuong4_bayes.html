@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 4 - Phân lớp Naive Bayes</title>
+    <title>Chương 4 - Phân lớp bằng Gini</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -15,8 +15,9 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/chuong4_bayes.css') }}"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   </head>
   <body>
     <nav>
@@ -65,69 +66,141 @@
         </li>
       </ul>
     </nav>
+
     <div class="wrapper">
-      <h1 class="titlePage">Phân lớp thuật toán Naive Bayes</h1>
-
-      <div class="inputFile">
-        <!-- Form upload file CSV -->
-        <div class="btnNhapFile">
-          <label for="csv-upload" class="upload-label"></label>
-          <input
-            type="file"
-            id="csv-upload"
-            accept=".csv"
-            onchange="handleFileUpload(event)"
-          />
-          <div id="table-container" class="table-container"></div>
-        </div>
-
-        <!-- Vùng để hiển thị các cột để phân lớp -->
-        <div id="columns-buttons-container"></div>
+      <h2>Naive Bayes</h2>
+      <input type="file" id="file-input" accept=".csv" />
+      <div id="csv-table-container"></div>
+      <div id="combobox-container"></div>
+      <div>
+        <label for="laplace-checkbox">Sử dụng Laplace Smoothing:</label>
+        <input type="checkbox" id="laplace-checkbox" />
       </div>
+      <button id="predict-btn">Dự đoán</button>
+      <div id="prediction-result"></div>
+      <div id="feature-columns-result"></div>
 
-      <!-- Target column selection -->
-      <div class="css-targer-accuracy">
-        <div class="css-for-accuracy-block">
-          <div class="css-target">
-            <span>Thuộc tính quyết định:</span>
-            <select id="target-column">
-              <option value="" selected disabled>Chưa có data 🌈</option>
-            </select>
-            <div class="css-btnRun">
-              <button class="css-btn-run" onclick="runNaiveBayes()">
-                Run Naive Bayes
-              </button>
-            </div>
-          </div>
-          <div>
-            <input
-              type="text"
-              id="accuracy-input"
-              readonly
-              placeholder="Độ chính xác sẽ hiển thị tại đây"
-            />
-          </div>
-        </div>
-      </div>
+      <script>
+        let csvData = []; // Dữ liệu CSV
+        let columns = []; // Danh sách cột
 
-      <!-- Kết quả -->
-      <div class="css-result-bayes">
-        <div id="confusion-matrix-container"></div>
-      </div>
+        document
+          .getElementById("file-input")
+          .addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+              const formData = new FormData();
+              formData.append("file", file);
 
-      <div class="css-new-file-upload">
-        <h3>Tải file CSV mới để dự đoán:</h3>
-        <input
-          type="file"
-          id="new-file-upload"
-          onchange="handleFileUploadNew(event)"
-        />
-        <div id="new-prediction-table-container"></div>
-      </div>
+              // Gửi file lên Flask
+              fetch("/upload_naive_bayes", {
+                method: "POST",
+                body: formData,
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.error) {
+                    alert("Lỗi: " + data.error);
+                  } else {
+                    // Hiển thị dữ liệu (bảng HTML và cột)
+                    document.getElementById("csv-table-container").innerHTML =
+                      data.table;
+                    columns = data.columns; // Cập nhật danh sách cột
+                    csvData = data.data; // Lưu lại dữ liệu thô
+                    createComboBoxes(); // Tạo combo box từ cột và dữ liệu
+                  }
+                })
+                .catch((error) => console.error("Lỗi khi gửi file:", error));
+            }
+          });
+
+        function createComboBoxes() {
+          const comboBoxContainer =
+            document.getElementById("combobox-container");
+          comboBoxContainer.innerHTML = ""; // Xóa combo box cũ nếu có
+
+          columns.forEach((column, colIndex) => {
+            // Bỏ qua cột cuối cùng (target column) khi tạo combobox
+            if (colIndex !== columns.length - 1) {
+              const uniqueValues = [
+                ...new Set(csvData.map((row) => row[colIndex])), // Loại bỏ giá trị trùng lặp
+              ];
+
+              const label = document.createElement("label");
+              label.textContent = `Chọn giá trị cho cột "${column}":`;
+
+              const select = document.createElement("select");
+              select.id = `column-${colIndex}`;
+
+              uniqueValues.forEach((value) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+              });
+
+              comboBoxContainer.appendChild(label);
+              comboBoxContainer.appendChild(select);
+              comboBoxContainer.appendChild(document.createElement("br"));
+            }
+          });
+        }
+
+        document
+          .getElementById("predict-btn")
+          .addEventListener("click", function () {
+            const comboboxValues = [];
+            columns.forEach((column, colIndex) => {
+              const select = document.getElementById(`column-${colIndex}`);
+              if (select) {
+                comboboxValues.push(select.value);
+              }
+            });
+
+            const useLaplace =
+              document.getElementById("laplace-checkbox").checked;
+
+            // Gửi yêu cầu tới Flask
+            fetch("/predict_naive_bayes", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                selected_values: comboboxValues,
+                use_laplace: useLaplace,
+              }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.error) {
+                  alert("Lỗi: " + data.error);
+                } else {
+                  // Xử lý kết quả nếu không có lỗi
+                  console.log(data); // Kiểm tra kết quả từ server
+                  const predictionResult =
+                    document.getElementById("prediction-result");
+                  if (predictionResult) {
+                    let resultHTML = "<strong>Kết quả dự đoán:</strong><br>";
+                    if (data.prediction) {
+                      for (const [label, value] of Object.entries(
+                        data.prediction
+                      )) {
+                        resultHTML += `${label}: ${value}<br>`;
+                      }
+                      predictionResult.innerHTML = resultHTML;
+                    } else {
+                      predictionResult.innerHTML = "Không có kết quả dự đoán.";
+                    }
+                  }
+                }
+              })
+              .catch((error) => {
+                console.error("Lỗi khi gửi yêu cầu dự đoán:", error);
+                alert("Lỗi khi nhận dữ liệu từ server.");
+              });
+          });
+      </script>
     </div>
-    <script
-      src="{{ url_for('static', filename='js/chuong4_bayes.js') }}"
-      defer
-    ></script>
   </body>
 </html>

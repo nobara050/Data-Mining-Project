@@ -20,6 +20,8 @@ matplotlib.use('Agg')
 import pydotplus
 import graphviz
 import chardet
+from sklearn.preprocessing import OneHotEncoder
+
 import atexit   
 import base64
 import time
@@ -186,247 +188,184 @@ def upload_csv():
 # ==========================================
 # ==========================================
 
-# Tạo mô hình Naive bayes
-@app.route('/naive_bayes', methods=['POST'])
-def naive_bayes():
-    # Sử dụng các biến toàn cục
-    global model, selected_columns, encoders  
+@app.route('/upload_gini', methods=['POST'])
+def upload_csv_gini():
+    global dataset_gini, model_gini
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'Invalid file format'}), 400
 
     try:
-        # Thông báo các lỗi như chưa load data lên hay chưa chọn cột thuộc tính, quyết định
-        if dataset is None:
-            return jsonify({'error': 'Dataset is not uploaded'}), 400
-
-        selected_columns = request.json.get('selectedColumns', [])
-        target_column = request.json.get('targetColumn', None)
-
-        if not selected_columns or not target_column:
-            return jsonify({'error': 'Selected columns or target column is missing'}), 400
-
-        # Label Encoding
-        encoders = {}
-        encoded_data = dataset.copy()
-
-        for column in selected_columns + [target_column]:
-            le = LabelEncoder()
-            encoded_data[column] = le.fit_transform(encoded_data[column].astype(str))
-            encoders[column] = le
-
-        features = encoded_data[selected_columns]
-        target = encoded_data[target_column]
-
-        # Train mô hình Naive Bayes
-        model = GaussianNB()
-        model.fit(features, target)
-
-        # Do dữ liệu không lớn nên không slit ra train và test mà test lại trực tiếp trên dữ liệu gốc
-        y_pred = model.predict(features)
-        accuracy = accuracy_score(target, y_pred)
-        cm = metrics.confusion_matrix(target, y_pred)
-
-        # Tạo confusion matrix dưới dạng ảnh
-        cm_df = pd.DataFrame(cm, index=encoders[target_column].classes_, columns=encoders[target_column].classes_)
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(cm_df, annot=True, cmap="Blues", fmt="d", cbar=False)
-
-        # Lưu ảnh vào thư mục uploads với timestamp
-        uploads_dir = os.path.join(app.root_path, 'uploads')
-        if not os.path.exists(uploads_dir):
-            os.makedirs(uploads_dir)
-
-        timestamp = int(time.time())  # Lấy timestamp hiện tại
-        cm_image_path = os.path.join(uploads_dir, f'confusion_matrix_{timestamp}.png')
-        plt.savefig(cm_image_path)
-        plt.close()
-        
-        # Trả về URL của ảnh đã lưu
-        cm_image_url = f'/uploads/confusion_matrix_{timestamp}.png'
-
-        return jsonify({'accuracy': accuracy, 'confusion_matrix_image_url': cm_image_url}), 200
-
-    except Exception as e:
-        return jsonify({'error': f'Error training Naive Bayes model: {str(e)}'}), 500
-
-
-# Tải dữ liệu cần dự đoán bởi mô hình Naive Bayes
-@app.route("/upload4_bayes", methods=["POST"])
-def upload4_bayes():
-    global selected_columns, model, encoders
-
-    if not selected_columns or model is None:
-        return jsonify({"error": "Model chưa được tạo. Hãy chạy bước Naive Bayes trước."}), 400
-
-    if "file" not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        # Đọc file dữ liệu tải lên
-        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+        clear_uploads()
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
 
-        # Phát hiện encoding
         encoding = detect_encoding(filepath)
-        predict_data = pd.read_csv(filepath, encoding=encoding)
+        df = pd.read_csv(filepath, encoding=encoding)
 
-        # Encode data mới, chia ra làm 2 data để lát in ra kết quả không bị encoded
-        encoded_predict_data = predict_data.copy()
+        table_html = df.to_html(index=False, classes='table table-bordered', header=True)
+        columns = df.columns.tolist()
+        data = df.values.tolist()
 
-        for column in selected_columns:
-            if column in encoders:
-                le = encoders[column]
-                encoded_predict_data[column] = encoded_predict_data[column].map(
-                    lambda x: le.transform([x])[0] if x in le.classes_ else -1
-                )
-            else:
-                return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
-        
-        # Tiến hành dự đoán
-        # predictions = model.predict(encoded_predict_data[selected_columns])
-        # predict_data["Prediction"] = predictions
+        dataset_gini = df
 
-        # Thêm các xác suất dự đoán vào bảng predict_data
-        if hasattr(model, "predict_proba"):  # Kiểm tra xem mô hình có hỗ trợ phương thức predict_proba không
-            probabilities = model.predict_proba(encoded_predict_data[selected_columns])
-            class_names = encoders[list(encoders.keys())[-1]].classes_  # Tên các lớp từ encoder
-            for i, class_name in enumerate(class_names):
-                predict_data[f"Probability_{class_name}"] = probabilities[:, i]
-
-        # Tiến hành dự đoán
-        predictions = model.predict(encoded_predict_data[selected_columns])
-        predict_data["Prediction"] = predictions
-
-        # Đưa dữ liệu dự đoán về dạng trước khi encoded
-        target_column = list(encoders.keys())[-1]  # Lấy cột mục tiêu
-        if target_column in encoders:
-            target_encoder = encoders[target_column]
-            predict_data["Prediction"] = predict_data["Prediction"].map(
-                lambda x: target_encoder.inverse_transform([x])[0]
-            )
-
-
-        # Xuất ra HTML
-        result_html = predict_data.to_html(index=False, classes="table table-bordered")
-
-        return jsonify({"table": result_html}), 200
+        return jsonify({'table': table_html, 'columns': columns, 'data': data}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# Tạo mô hình Decision Tree
-@app.route('/decision_tree', methods=['POST'])
-def decision_tree():
-    global model, selected_columns, encoders 
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/predict_gini', methods=['POST'])
+def predict_gini():
+    global dataset_gini, model_gini
 
     try:
-        selected_columns = request.json.get('selectedColumns', [])
-        target_column = request.json.get('targetColumn', None)
+        data = request.get_json()
+        selected_values = data.get("selected_values")
 
-        if not selected_columns or not target_column:
-            return jsonify({'error': 'Selected columns or target column missing'}), 400
+        combobox_df = pd.DataFrame([selected_values], columns=dataset_gini.columns[:-1])
 
-        # Tách các cột target và selected_columns ra trước
-        features_data = dataset[selected_columns]
-        target_data = dataset[target_column]
+        dataset_no_target = dataset_gini.drop(columns=[dataset_gini.columns[-1]])
 
-        # Copy features và target vào biến mới (để tránh làm thay đổi dữ liệu gốc)
-        encoded_data = features_data.copy()
+        encoder = OneHotEncoder(sparse_output=False, drop='first')
+        encoded_data = encoder.fit_transform(dataset_no_target)
+        pre_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out(dataset_no_target.columns))
 
-        # LabelEncoder lên các cột được chọn (không làm lên target)
-        encoders = {}
-        for column in selected_columns:
-            le = LabelEncoder()
-            encoded_data[column] = le.fit_transform(features_data[column].astype(str))
-            encoders[column] = le
+        target = dataset_gini[dataset_gini.columns[-1]]
+        label_encoder = LabelEncoder()
+        target_encoded = label_encoder.fit_transform(target)
 
-        # Tách features và target sau khi encoding
-        features = encoded_data
-        target = target_data
+        X = pre_df
+        y = target_encoded
 
-        # Train mô hình Decision Tree
-        model = DecisionTreeClassifier()
-        model.fit(features, target)
+        model_gini = DecisionTreeClassifier(criterion='gini')
+        model_gini.fit(X, y)
 
-        # Do dữ liệu không lớn nên không slit ra train và test mà test lại trực tiếp trên dữ liệu gốc
-        y_pred = model.predict(features)
-        accuracy = metrics.accuracy_score(target, y_pred)
+        combobox_df_pre = encoder.transform(combobox_df)
+        combobox_df_pre = pd.DataFrame(combobox_df_pre, columns=encoder.get_feature_names_out(combobox_df.columns))
 
-        # Tạo ảnh cây 
-        dot_data = StringIO()
-        export_graphviz(
-            model,
-            out_file=dot_data,
-            filled=True,
-            rounded=True,
-            special_characters=True,
-            feature_names=features.columns,
-            class_names=[str(c) for c in target.unique()],
-        )
-        graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+        missing_cols = set(X.columns) - set(combobox_df_pre.columns)
+        for col in missing_cols:
+            combobox_df_pre[col] = 0
 
-        timestamp = int(time.time())
-        graph_path = os.path.join(UPLOAD_FOLDER, f"decision_tree_{timestamp}.png")
-        graph.write_png(graph_path)
-        graph_url = f'/uploads/decision_tree_{timestamp}.png'
+        prediction_proba = model_gini.predict_proba(combobox_df_pre)
+        prediction = prediction_proba[0]
 
-        return jsonify({'accuracy': accuracy, 'graph': graph_url}), 200
+        target_columns = label_encoder.classes_.tolist()
+
+        return jsonify({
+            'prediction': {
+                target_columns[0]: f"{(prediction[0] * 100):.2f}%",
+                target_columns[1]: f"{(prediction[1] * 100):.2f}%"
+            }
+        }), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-# Tải dữ liệu cần dự đoán bởi mô hình Decision Tree
-@app.route("/upload4_decision", methods=["POST"])
-def upload4_decision():
-    global selected_columns, model, encoders
 
-    if not selected_columns or model is None:
-        return jsonify({"error": "Model chưa được tạo. Hãy chạy bước tạo cây trước."}), 400
+@app.route('/upload_naive_bayes', methods=['POST'])
+def upload_naive_bayes():
+    global dataset, model, encoders
+    encoders = {}
+    model = None
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
 
-    if "file" not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
+    file = request.files['file']
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'Invalid file format'}), 400
 
     try:
-        # Đọc file CSV
-        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+        clear_uploads()
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
 
-        # Tự động phát hiện encoding
         encoding = detect_encoding(filepath)
-        predict_data = pd.read_csv(filepath, encoding=encoding)
+        df = pd.read_csv(filepath, encoding=encoding)
 
-        # Apply LabelEncoder to the new data
-        encoded_predict_data = predict_data.copy()
+        table_html = df.to_html(index=False, classes='table table-bordered', header=True)
+        columns = df.columns.tolist()  # Lưu cột trong DataFrame
+        data = df.values.tolist()  # Dữ liệu thô
 
-        for column in selected_columns:
-            if column in encoders:
-                le = encoders[column]
-                # Handle unseen values by mapping them to -1
-                encoded_predict_data[column] = encoded_predict_data[column].map(
-                    lambda x: le.transform([x])[0] if x in le.classes_ else -1
-                )
-            else:
-                return jsonify({"error": f"Column {column} is missing in the uploaded file."}), 400
+        dataset = df
 
-        # Dự đoán kết quả
-        predictions = model.predict(encoded_predict_data[selected_columns])
-        predict_data["Prediction"] = predictions
-
-        # Chuyển kết quả thành bảng HTML để hiển thị
-        result_html = predict_data.to_html(index=False, classes="table table-bordered")
-
-        return jsonify({"table": result_html}), 200
+        return jsonify({'table': table_html, 'columns': columns, 'data': data}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/predict_naive_bayes', methods=['POST'])
+def predict_naive_bayes():
+    global dataset, model
+
+    try:
+        data = request.get_json()
+        selected_values = data.get("selected_values")
+
+        # Tạo DataFrame từ selected_values (các giá trị combobox)
+        combobox_df = pd.DataFrame([selected_values], columns=dataset.columns[:-1])  # Loại bỏ cột target
+
+        # Tiền xử lý dữ liệu
+        dataset_no_target = dataset.drop(columns=[dataset.columns[-1]])  # Loại bỏ cột mục tiêu trước khi encode
+
+        # Áp dụng OneHotEncoder cho các cột tính năng (X)
+        encoder = OneHotEncoder(sparse_output=False, drop='first')
+        encoded_data = encoder.fit_transform(dataset_no_target)
+        pre_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out(dataset_no_target.columns))
+
+        # Sử dụng LabelEncoder cho cột mục tiêu (y)
+        target = dataset[dataset.columns[-1]]
+        label_encoder = LabelEncoder()
+        target_encoded = label_encoder.fit_transform(target)  # Mã hóa cột mục tiêu thành các số nguyên
+
+        # Chia X (tính năng) và y (cột mục tiêu đã được mã hóa)
+        X = pre_df
+        y = target_encoded  # y là mảng 1D với giá trị số nguyên
+
+        # Huấn luyện mô hình với Laplace Smoothing (var_smoothing)
+        model = GaussianNB(var_smoothing=1e-9)  # Chỉnh var_smoothing nếu cần làm trơn (Laplace Smoothing)
+        model.fit(X, y)
+
+        # Tiền xử lý dữ liệu combobox (giống như đã làm với train data)
+        combobox_df_pre = encoder.transform(combobox_df)
+        combobox_df_pre = pd.DataFrame(combobox_df_pre, columns=encoder.get_feature_names_out(combobox_df.columns))
+
+        # Kiểm tra nếu có cột thiếu và thêm chúng với giá trị 0
+        missing_cols = set(X.columns) - set(combobox_df_pre.columns)
+        for col in missing_cols:
+            combobox_df_pre[col] = 0  # Thêm cột thiếu với giá trị 0 (nếu có)
+
+        # Dự đoán với mô hình đã huấn luyện
+        prediction = model.predict_proba(combobox_df_pre)
+
+        # Lấy xác suất cho từng lớp
+        prediction = prediction[0]  # Lấy kết quả cho một mẫu duy nhất
+
+        # Lấy tên các lớp (Cao, Thấp) từ label_encoder
+        target_columns = label_encoder.classes_.tolist()
+
+        # Trả về kết quả dự đoán và xác suất của từng lớp, chuyển đổi thành phần trăm
+        return jsonify({
+            'prediction': {
+                target_columns[0]: f"{prediction[0] * 100:.2f}%",  # Lớp Cao
+                target_columns[1]: f"{prediction[1] * 100:.2f}%"   # Lớp Thấp
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+
+
 
 # ==========================================
 # ==========================================

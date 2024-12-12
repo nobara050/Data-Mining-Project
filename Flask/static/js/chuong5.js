@@ -115,53 +115,6 @@ function handleKMeans() {
     });
 }
 
-// function display3DImage(imageBase64) {
-//   const diagramClusterDiv = document.querySelector(".Diagram-cluster");
-
-//   // Create an image element and set the src to the base64-encoded image
-//   const img = document.createElement("img");
-//   img.src = `data:image/png;base64,${imageBase64}`;
-//   img.alt = "3D Cluster Diagram";
-
-//   // Clear previous image if any
-//   diagramClusterDiv.innerHTML = "";
-
-//   // Append the new image
-//   diagramClusterDiv.appendChild(img);
-// }
-
-// function renderClusterInput(clusters, data) {
-//   const resultDiv = document.getElementById("result");
-//   resultDiv.innerHTML = ""; // Clear previous result
-
-//   // Tạo một div chứa kết quả
-//   const clusterContainer = document.createElement("div");
-
-//   clusters.forEach((cluster, index) => {
-//     const clusterDiv = document.createElement("div");
-//     clusterDiv.classList.add("cluster");
-
-//     // Tạo tiêu đề cho cụm
-//     const clusterTitle = document.createElement("h4");
-//     clusterTitle.textContent = `${cluster}:`;
-
-//     // Tạo một input cho từng cụm, hiển thị các số thứ tự của phần tử
-//     const input = document.createElement("input");
-//     input.type = "text";
-//     input.value = data[index].join(" "); // Hiển thị các số thứ tự của phần tử trong cụm
-
-//     // Thêm tiêu đề và input vào div của cụm
-//     clusterDiv.appendChild(clusterTitle);
-//     clusterDiv.appendChild(input);
-
-//     // Thêm div của cụm vào container
-//     clusterContainer.appendChild(clusterDiv);
-//   });
-
-//   // Thêm container vào resultDiv
-//   resultDiv.appendChild(clusterContainer);
-// }
-
 function renderClusterInput(clusters, data) {
   const resultDiv = document.getElementById("result");
   resultDiv.innerHTML = ""; // Clear previous result

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 4 - Phân lớp</title>
+    <title>Chương 4 - Phân lớp bằng Gini</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -15,8 +15,9 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/chuong4_gini.css') }}"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   </head>
   <body>
     <nav>
@@ -65,65 +66,138 @@
         </li>
       </ul>
     </nav>
+
     <div class="wrapper">
-      <h1 class="titlePage">Phân lớp Gini thuật toán CART</h1>
-      <div class="inputFile">
-        <!-- Form upload file CSV -->
-        <div class="btnNhapFile">
-          <label for="csv-upload" class="upload-label"></label>
-          <input
-            type="file"
-            id="csv-upload"
-            accept=".csv"
-            onchange="handleFileUpload(event)"
-          />
-          <div id="table-container" class="table-container"></div>
-        </div>
+      <h2>Gini</h2>
+      <input type="file" id="file-input" accept=".csv" />
+      <div id="csv-table-container"></div>
+      <div id="combobox-container"></div>
 
-        <!-- Vùng để hiển thị bảng -->
-        <div id="columns-buttons-container"></div>
-      </div>
-      <!-- Target column selection -->
+      <button id="predict-btn">Dự đoán</button>
+      <div id="prediction-result"></div>
+      <div id="feature-columns-result"></div>
 
-      <div class="css-targer-accuracy">
-        <div class="css-for-accuracy-block">
-          <div class="css-target">
-            <span>Thuộc tính quyết định:</span>
-            <select id="target-column">
-              <option value="" selected disabled>Chưa có data 🌈</option>
-            </select>
-            <div class="css-btnTree">
-              <button class="css-btn-tree" onclick="runDecisionTree()">
-                Run Decision Tree
-              </button>
-            </div>
-          </div>
-          <div>
-            <input
-              type="text"
-              id="accuracy-input"
-              readonly
-              placeholder="Độ chính xác sẽ hiển thị tại đây"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="css-result-chuong4">
-        <div id="decision-tree-result"></div>
-      </div>
-      <div class="css-new-file-upload">
-        <h3>Tải file CSV mới để dự đoán:</h3>
-        <input
-          type="file"
-          id="new-file-upload"
-          onchange="handleFileUploadNew(event)"
-        />
-        <div id="new-prediction-table-container"></div>
-      </div>
+      <script>
+        let csvData = []; // Dữ liệu CSV
+        let columns = []; // Danh sách cột
+
+        // Lắng nghe sự kiện thay đổi file và gửi đến Flask
+        document
+          .getElementById("file-input")
+          .addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+              const formData = new FormData();
+              formData.append("file", file);
+
+              // Gửi file lên Flask (route mới cho Gini)
+              fetch("/upload_gini", {
+                method: "POST",
+                body: formData,
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.error) {
+                    alert("Lỗi: " + data.error);
+                  } else {
+                    // Hiển thị dữ liệu (bảng HTML và cột)
+                    document.getElementById("csv-table-container").innerHTML =
+                      data.table;
+                    columns = data.columns; // Cập nhật danh sách cột
+                    csvData = data.data; // Lưu lại dữ liệu thô
+                    createComboBoxes(); // Tạo combo box từ cột và dữ liệu
+                  }
+                })
+                .catch((error) => console.error("Lỗi khi gửi file:", error));
+            }
+          });
+
+        // Tạo các combobox dựa trên cột và giá trị của từng cột
+        function createComboBoxes() {
+          const comboBoxContainer =
+            document.getElementById("combobox-container");
+          comboBoxContainer.innerHTML = ""; // Xóa combo box cũ nếu có
+
+          columns.forEach((column, colIndex) => {
+            // Bỏ qua cột cuối cùng (target column) khi tạo combobox
+            if (colIndex !== columns.length - 1) {
+              const uniqueValues = [
+                ...new Set(csvData.map((row) => row[colIndex])), // Loại bỏ giá trị trùng lặp
+              ];
+
+              const label = document.createElement("label");
+              label.textContent = `Chọn giá trị cho cột "${column}":`;
+
+              const select = document.createElement("select");
+              select.id = `column-${colIndex}`;
+
+              uniqueValues.forEach((value) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+              });
+
+              comboBoxContainer.appendChild(label);
+              comboBoxContainer.appendChild(select);
+              comboBoxContainer.appendChild(document.createElement("br"));
+            }
+          });
+        }
+
+        // Lắng nghe sự kiện click vào nút "Dự đoán"
+        document
+          .getElementById("predict-btn")
+          .addEventListener("click", function () {
+            // Lấy giá trị từ các combobox
+            const comboboxValues = [];
+            columns.forEach((column, colIndex) => {
+              const select = document.getElementById(`column-${colIndex}`);
+              if (select) {
+                comboboxValues.push(select.value);
+              }
+            });
+
+            // Gửi dữ liệu tới Flask (dành cho Gini)
+            fetch("/predict_gini", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                selected_values: comboboxValues,
+              }),
+            })
+              .then((response) => response.json()) // Chắc chắn rằng bạn nhận về JSON
+              .then((data) => {
+                if (data.error) {
+                  alert("Lỗi: " + data.error);
+                } else {
+                  // Hiển thị kết quả dự đoán (Cao và Thấp)
+                  const predictionResult =
+                    document.getElementById("prediction-result");
+                  if (predictionResult) {
+                    let resultHTML = "<strong>Kết quả dự đoán:</strong><br>";
+                    // Kiểm tra xem có dữ liệu dự đoán không
+                    if (data.prediction) {
+                      for (const [label, value] of Object.entries(
+                        data.prediction
+                      )) {
+                        resultHTML += `${label}: ${value}<br>`; // Hiển thị kết quả dự đoán
+                      }
+                      predictionResult.innerHTML = resultHTML;
+                    } else {
+                      predictionResult.innerHTML = "Không có kết quả dự đoán.";
+                    }
+                  }
+                }
+              })
+              .catch((error) => {
+                console.error("Lỗi khi gửi yêu cầu dự đoán:", error);
+                alert("Lỗi khi nhận dữ liệu từ server.");
+              });
+          });
+      </script>
     </div>
-    <script
-      src="{{ url_for('static', filename='js/chuong4_gini.js') }}"
-      defer
-    ></script>
   </body>
 </html>

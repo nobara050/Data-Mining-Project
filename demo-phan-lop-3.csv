@@ -1,7 +1,16 @@
 ﻿Thu nhập,Nghề nghiệp,Tình trạng hôn nhân,Sở hữu nhà,Nguy cơ rủi ro
-Trung bình,Vận tải,Độc thân,Rồi,Cao
-Cao,Vận tải,Độc thân,Rồi,Cao
-Thấp,Vận tải,Đã kết hôn,Rồi,Thấp
-Cao,Truyền thông,Độc thân,Rồi,Thấp
-Trung bình,Vận tải,Độc thân,Rồi,Cao
-Thấp,Truyền thông,Đã kết hôn,Rồi,Thấp
+Thấp,Vận tải,Độc thân,Rồi,Cao
+Thấp,Vận tải,Độc thân,Chưa,Cao
+Cao,Vận tải,Độc thân,Rồi,Thấp
+Trung bình,Truyền thông,Độc thân,Rồi,Thấp
+Trung bình,Kinh doanh,Đã kết hôn,Rồi,Thấp
+Trung bình,Kinh doanh,Đã kết hôn,Chưa,Cao
+Cao,Kinh doanh,Đã kết hôn,Chưa,Thấp
+Thấp,Truyền thông,Độc thân,Rồi,Cao
+Thấp,Kinh doanh,Đã kết hôn,Rồi,Thấp
+Trung bình,Truyền thông,Đã kết hôn,Rồi,Thấp
+Thấp,Truyền thông,Đã kết hôn,Chưa,Thấp
+Cao,Truyền thông,Độc thân,Chưa,Thấp
+Cao,Vận tải,Đã kết hôn,Rồi,Thấp
+Trung bình,Truyền thông,Độc thân,Chưa,Cao
+Cao,Kinh doanh,Độc thân,Rồi,Cao
