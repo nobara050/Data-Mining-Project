@@ -89,6 +89,10 @@
 
           <h3>Kết quả Binning</h3>
           <div id="binning-result"></div>
+
+          <h3>Thống kê Dữ liệu</h3>
+          <p><strong>Trung bình:</strong> <span id="mean-result"></span></p>
+          <p><strong>Trung vị:</strong> <span id="median-result"></span></p>
         </div>
       </div>
     </div>
@@ -121,35 +125,72 @@
         const bins = binData(values, binCount);
 
         // Hiển thị kết quả binning
-        displayBinningResult(bins);
+        displayBinningResult(bins, values);
+
+        // Tính toán và hiển thị các thống kê
+        displayStatistics(values);
       }
 
       // Chia dữ liệu thành các bins
       function binData(data, numBins) {
-        data.sort((a, b) => a - b); // Sắp xếp dữ liệu theo thứ tự tăng dần
+        const sortedData = [...data].sort((a, b) => a - b); // Sắp xếp dữ liệu theo thứ tự tăng dần
         const bins = Array(numBins)
           .fill()
           .map(() => []); // Tạo mảng các bins
 
         const binSize = Math.ceil(data.length / numBins); // Tính kích thước bin
-        for (let i = 0; i < data.length; i++) {
-          bins[Math.floor(i / binSize)].push(data[i]); // Chia dữ liệu vào các bins
+        for (let i = 0; i < sortedData.length; i++) {
+          bins[Math.floor(i / binSize)].push(sortedData[i]); // Chia dữ liệu vào các bins
         }
         return bins;
       }
 
       // Hiển thị kết quả binning
-      function displayBinningResult(bins) {
+      function displayBinningResult(bins, originalData) {
         const resultDiv = document.getElementById("binning-result");
         resultDiv.innerHTML = ""; // Clear previous content
 
-        bins.forEach((bin, index) => {
-          const binDiv = document.createElement("div");
-          binDiv.innerHTML = `<strong>Bin ${index + 1}:</strong> ${bin.join(
-            ", "
-          )}`;
-          resultDiv.appendChild(binDiv);
+        // Tính trung bình cho từng bin
+        const binMeans = bins.map(
+          (bin) => bin.reduce((a, b) => a + b, 0) / bin.length
+        );
+
+        // Thay thế giá trị trong mỗi nhóm bằng giá trị trung bình
+        const smoothedData = originalData.map((value) => {
+          const binIndex = bins.findIndex((bin) => bin.includes(value));
+          return binMeans[binIndex];
         });
+
+        resultDiv.innerHTML =
+          "<strong>Dữ liệu sau khi khử nhiễu:</strong> " +
+          smoothedData.join(", ");
+      }
+
+      // Tính và hiển thị trung bình và trung vị
+      function displayStatistics(values) {
+        const mean = calculateMean(values);
+        const median = calculateMedian(values);
+
+        document.getElementById("mean-result").textContent = mean.toFixed(2);
+        document.getElementById("median-result").textContent = median;
+      }
+
+      // Hàm tính trung bình
+      function calculateMean(values) {
+        const sum = values.reduce((acc, value) => acc + value, 0);
+        return sum / values.length;
+      }
+
+      // Hàm tính trung vị
+      function calculateMedian(values) {
+        values.sort((a, b) => a - b);
+        const mid = Math.floor(values.length / 2);
+
+        if (values.length % 2 === 0) {
+          return (values[mid - 1] + values[mid]) / 2;
+        } else {
+          return values[mid];
+        }
       }
     </script>
   </body>

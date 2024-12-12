@@ -431,9 +431,9 @@
         // Hiển thị các luật kết hợp
         displayAssociationRules(associationRules);
       }
-
       function generateAssociationRules(itemsets, minConf, minSup) {
         const rules = [];
+        const seenRules = new Set(); // Để theo dõi các luật đã tạo
 
         // Duyệt qua từng itemset
         itemsets.forEach((itemset) => {
@@ -461,12 +461,28 @@
 
                 // Kiểm tra nếu confidence >= minConf và supportXY >= minSup
                 if (confidence >= minConf && supportXY >= minSup) {
-                  rules.push({
-                    antecedent: antecedent,
-                    consequent: consequent,
-                    confidence: confidence,
-                    support: supportXY,
-                  });
+                  // Chuyển antecedent và consequent thành chuỗi để dễ so sánh
+                  const ruleString = `(${antecedent
+                    .sort()
+                    .join(", ")}) -> (${consequent.sort().join(", ")})`;
+
+                  // Kiểm tra xem luật này có phải là con của luật nào đó đã tồn tại hay không
+                  const isCoveredByExistingRule = rules.some(
+                    (rule) =>
+                      isSubset(antecedent, rule.antecedent) &&
+                      isSubset(consequent, rule.consequent)
+                  );
+
+                  // Nếu luật không bị bao phủ bởi bất kỳ luật nào, thêm vào danh sách
+                  if (!isCoveredByExistingRule && !seenRules.has(ruleString)) {
+                    rules.push({
+                      antecedent: antecedent,
+                      consequent: consequent,
+                      confidence: confidence,
+                      support: supportXY,
+                    });
+                    seenRules.add(ruleString); // Đánh dấu luật này đã tồn tại
+                  }
                 }
               }
             });
@@ -474,6 +490,54 @@
         });
 
         return rules; // Trả về các luật thỏa mãn điều kiện
+      }
+
+      // Hàm kiểm tra một tập con là một phần của một giao dịch
+      function isSubset(subset, superset) {
+        return subset.every((item) => superset.includes(item));
+      }
+
+      function removeRedundantRules(rules) {
+        const uniqueRules = [];
+
+        rules.forEach((rule) => {
+          let isRedundant = false;
+
+          // Kiểm tra nếu antecedent và consequent của rule này có bị trùng lặp với luật khác
+          for (let i = 0; i < uniqueRules.length; i++) {
+            const existingRule = uniqueRules[i];
+
+            // Nếu antecedent và consequent giống nhau (không phân biệt thứ tự), coi là trùng lặp
+            if (
+              arraysEqual(
+                rule.antecedent.sort(),
+                existingRule.antecedent.sort()
+              ) &&
+              arraysEqual(
+                rule.consequent.sort(),
+                existingRule.consequent.sort()
+              )
+            ) {
+              isRedundant = true;
+              break;
+            }
+          }
+
+          // Nếu không phải luật trùng lặp, thêm vào danh sách
+          if (!isRedundant) {
+            uniqueRules.push(rule);
+          }
+        });
+
+        return uniqueRules;
+      }
+
+      // Hàm so sánh hai mảng
+      function arraysEqual(arr1, arr2) {
+        return (
+          arr1.length === arr2.length &&
+          arr1.every((value, index) => value === arr2[index])
+        );
       }
 
       // Hàm lấy tất cả các tập con hợp lệ của một tập
@@ -493,6 +557,7 @@
         return subsets;
       }
 
+      // Hàm tính support của một itemset
       function calculateSupport(itemset) {
         const totalTransactions = transactions.length;
         let count = 0;
