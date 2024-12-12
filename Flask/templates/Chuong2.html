@@ -332,15 +332,39 @@
         const minSup = parseFloat(document.getElementById("min-sup").value);
         const itemsets = aprioriAlgorithm(transactions, minSup);
 
-        // Tìm tập phổ biến tối đại (có độ dài lớn nhất)
-        const maxLength = Math.max(
-          ...itemsets.map((itemset) => itemset.length)
-        );
-        const maxItemsets = itemsets.filter(
-          (itemset) => itemset.length === maxLength
-        );
+        // Tìm tập phổ biến tối đại
+        const maxItemsets = findMaximalItemsets(itemsets);
 
+        // Hiển thị các tập phổ biến tối đại
         displayMaxFrequentItemsets(maxItemsets);
+      }
+
+      // Hàm kiểm tra tập phổ biến tối đại
+      function findMaximalItemsets(itemsets) {
+        let maxItemsets = [];
+
+        itemsets.forEach((itemset) => {
+          let isMaximal = true;
+          itemsets.forEach((otherItemset) => {
+            if (
+              itemset.length < otherItemset.length &&
+              isSubset(itemset, otherItemset)
+            ) {
+              isMaximal = false;
+            }
+          });
+
+          if (isMaximal) {
+            maxItemsets.push(itemset);
+          }
+        });
+
+        return maxItemsets;
+      }
+
+      // Hàm kiểm tra một tập là tập con của một tập khác
+      function isSubset(itemset, otherItemset) {
+        return itemset.every((item) => otherItemset.includes(item));
       }
 
       function displayMaxFrequentItemsets(itemsets) {
