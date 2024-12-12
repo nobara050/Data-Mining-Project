@@ -1,0 +1,93 @@
+h1.titlePage {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.content {
+  padding: 0px 50px;
+}
+h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+/* Định dạng cho phần form nhập liệu */
+input[type="file"] {
+  display: inline-block;
+  background-color: #1e8648;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+input[type="file"]:hover {
+  background-color: #1e8648;
+}
+
+select,
+button {
+  display: inline-block;
+  padding: 10px;
+  margin: 10px 0;
+  width: 100%;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+select:focus,
+button:focus {
+  outline: none;
+  border-color: #1e8648;
+}
+
+button {
+  background-color: #1e8648;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #1e8648;
+}
+
+/* Định dạng cho bảng */
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+}
+
+table th,
+table td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+table th {
+  background-color: #1e8648;
+  color: white;
+}
+
+table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+table tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Định dạng cho phần hiển thị kết quả */
+#result {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+}
+
+.option-chuong4-absolute > span {
+  pointer-events: none; /* Không cho click vào span */
+}

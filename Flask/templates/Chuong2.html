@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 2 -Tập phổ biến</title>
+    <title>Chương 2 - Tập phổ biến</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -13,6 +13,11 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
   </head>
   <body>
     <nav>
@@ -61,6 +66,303 @@
         </li>
       </ul>
     </nav>
-    <div class="wrapper"></div>
+
+    <div class="wrapper">
+      <div class="content">
+        <h1 class="titlePage">Tải và Hiển thị File Excel</h1>
+
+        <div id="excel-file-upload">
+          <label for="excel-file-input"
+            >Chọn file Excel (dạng .xlsx hoặc .xls):</label
+          >
+          <input type="file" id="excel-file-input" accept=".xlsx, .xls" />
+          <button onclick="processExcel()">Xử lý File</button>
+
+          <h3>Ma trận Dữ liệu</h3>
+          <div id="matrix-result"></div>
+
+          <!-- <h3>Danh sách Giao dịch (Transactions)</h3>
+          <div id="transactions-result"></div> -->
+
+          <h3 style="padding-top: 20px">
+            Nhập Tần Suất Tối Thiểu (min_sup từ 0 đến 1)
+          </h3>
+          <input
+            type="number"
+            id="min-sup"
+            min="0"
+            max="1"
+            step="0.1"
+            style="width: 100px; height: 30px; font-size: 18px"
+          />
+
+          <button onclick="findFrequentItemsets()">Tìm Tập Phổ Biến</button>
+
+          <h3>Tập Phổ Biến</h3>
+          <div id="frequent-itemsets-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let transactions = [];
+
+      function processExcel() {
+        const fileInput = document.getElementById("excel-file-input");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          alert("Vui lòng chọn một file Excel.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+
+          // Giả sử sheet đầu tiên là dữ liệu
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          // Chuyển đổi sheet thành JSON và bỏ qua hàng đầu tiên (header)
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          jsonData.shift(); // Bỏ qua dòng đầu tiên (header)
+
+          // Xử lý dữ liệu thành ma trận 0-1
+          const matrix = convertToBinaryMatrix(jsonData);
+          displayMatrix(matrix);
+
+          // Chuyển đổi ma trận thành transactions và hiển thị
+          transactions = convertToTransactions(matrix);
+          console.log("Transactions:", transactions);
+          displayTransactions(transactions);
+        };
+
+        reader.readAsBinaryString(file);
+      }
+
+      function convertToBinaryMatrix(data) {
+        const invoices = new Set();
+        const items = new Set();
+
+        // Xử lý dữ liệu để tìm các hóa đơn và mặt hàng
+        data.forEach((row) => {
+          const invoice = row[0]; // Hóa đơn (o1, o2, ...)
+          const item = row[1]; // Mặt hàng (i1, i2, ...)
+          invoices.add(invoice);
+          items.add(item);
+        });
+
+        const invoicesArray = Array.from(invoices);
+        const itemsArray = Array.from(items);
+
+        const matrix = invoicesArray.map((invoice) => {
+          return itemsArray.map((item) => {
+            return data.some((row) => row[0] === invoice && row[1] === item)
+              ? 1
+              : 0;
+          });
+        });
+
+        return { invoices: invoicesArray, items: itemsArray, matrix };
+      }
+
+      function convertToTransactions(matrixData) {
+        const transactions = [];
+        matrixData.matrix.forEach((row, rowIndex) => {
+          const transaction = [];
+          row.forEach((value, colIndex) => {
+            if (value === 1) {
+              transaction.push(matrixData.items[colIndex]);
+            }
+          });
+          if (transaction.length > 0) {
+            transactions.push(transaction);
+          }
+        });
+        return transactions;
+      }
+
+      function displayMatrix(matrixData) {
+        const resultDiv = document.getElementById("matrix-result");
+        resultDiv.innerHTML = "";
+
+        const table = document.createElement("table");
+        const headerRow = document.createElement("tr");
+        const headerCell = document.createElement("th");
+        headerCell.innerText = "Hóa đơn";
+        headerRow.appendChild(headerCell);
+
+        matrixData.items.forEach((item) => {
+          const itemCell = document.createElement("th");
+          itemCell.innerText = item;
+          headerRow.appendChild(itemCell);
+        });
+        table.appendChild(headerRow);
+
+        matrixData.matrix.forEach((row, rowIndex) => {
+          const rowElement = document.createElement("tr");
+
+          const rowHeader = document.createElement("td");
+          rowHeader.innerText = `${matrixData.invoices[rowIndex]}`;
+          rowElement.appendChild(rowHeader);
+
+          row.forEach((value) => {
+            const cell = document.createElement("td");
+            cell.innerText = value;
+            rowElement.appendChild(cell);
+          });
+
+          table.appendChild(rowElement);
+        });
+
+        resultDiv.appendChild(table);
+      }
+
+      // function displayTransactions(transactions) {
+      //   const resultDiv = document.getElementById("transactions-result");
+      //   resultDiv.innerHTML = "";
+
+      //   if (transactions.length === 0) {
+      //     resultDiv.innerHTML = "<p>Không có giao dịch nào.</p>";
+      //     return;
+      //   }
+
+      //   const ul = document.createElement("ul");
+      //   transactions.forEach((transaction) => {
+      //     const li = document.createElement("li");
+      //     li.innerText = `[${transaction.join(", ")}]`;
+      //     ul.appendChild(li);
+      //   });
+
+      //   resultDiv.appendChild(ul);
+      // }
+
+      function findFrequentItemsets() {
+        const minSup = parseFloat(document.getElementById("min-sup").value);
+        const itemsets = aprioriAlgorithm(transactions, minSup);
+        displayFrequentItemsets(itemsets);
+      }
+
+      function aprioriAlgorithm(transactions, minSup) {
+        const totalTransactions = transactions.length;
+        let itemsets = [];
+        const itemCounts = {};
+
+        // Đếm tần suất của các item đơn lẻ (itemsets có 1 phần tử)
+        transactions.forEach((transaction) => {
+          transaction.forEach((item) => {
+            itemCounts[item] = (itemCounts[item] || 0) + 1;
+          });
+        });
+
+        // Lọc các itemsets có tần suất >= minSup (đối với các item đơn lẻ)
+        const frequentItemsets = [];
+        Object.keys(itemCounts).forEach((item) => {
+          const support = itemCounts[item] / totalTransactions;
+          if (support >= minSup) {
+            frequentItemsets.push([item]);
+          }
+        });
+
+        // Lưu các itemsets phổ biến có 1 phần tử
+        itemsets = frequentItemsets;
+
+        // Mảng chứa kết quả các tập phổ biến từ độ dài 2 đến n
+        const allFrequentItemsets = [...frequentItemsets];
+
+        let k = 2; // Bắt đầu từ độ dài itemset là 2
+        const seenItemsets = new Set(); // Set để theo dõi các itemsets đã gặp
+
+        while (itemsets.length > 0) {
+          const candidateItemsets = generateCandidates(itemsets, k); // Sinh ứng viên có độ dài k
+          const candidateCounts = {};
+
+          // Đếm tần suất các candidate itemset
+          transactions.forEach((transaction) => {
+            candidateItemsets.forEach((candidate) => {
+              // Sắp xếp itemset để đảm bảo không phân biệt hoán đổi
+              const sortedCandidate = candidate.slice().sort().join(", ");
+              if (
+                isSubset(candidate, transaction) &&
+                !seenItemsets.has(sortedCandidate)
+              ) {
+                candidateCounts[sortedCandidate] =
+                  (candidateCounts[sortedCandidate] || 0) + 1;
+              }
+            });
+          });
+
+          // Lọc các itemsets có tần suất >= minSup và chưa gặp
+          const frequentCandidates = [];
+          for (const [candidate, count] of Object.entries(candidateCounts)) {
+            const support = count / totalTransactions;
+            if (support >= minSup) {
+              frequentCandidates.push(candidate.split(", "));
+              seenItemsets.add(candidate); // Đánh dấu itemset đã gặp
+            }
+          }
+
+          if (frequentCandidates.length > 0) {
+            allFrequentItemsets.push(...frequentCandidates); // Lưu các itemsets phổ biến
+            itemsets = frequentCandidates; // Cập nhật itemsets cho vòng tiếp theo
+          } else {
+            break; // Nếu không còn itemsets phổ biến thì kết thúc
+          }
+
+          k++; // Tiến tới tìm các itemsets có độ dài k + 1
+        }
+
+        return allFrequentItemsets; // Trả về tất cả các tập phổ biến
+      }
+
+      // Sinh các candidate itemsets từ itemsets hiện có (kết hợp các itemsets với độ dài k-1)
+      function generateCandidates(itemsets, k) {
+        const candidates = [];
+        const set = new Set();
+
+        // Sinh các itemsets có độ dài k bằng cách kết hợp các itemsets với độ dài k-1
+        for (let i = 0; i < itemsets.length; i++) {
+          for (let j = i + 1; j < itemsets.length; j++) {
+            const candidate = [...new Set([...itemsets[i], ...itemsets[j]])]; // Hợp nhất 2 itemsets
+            if (candidate.length === k) {
+              // Kiểm tra độ dài
+              const sortedCandidate = candidate.slice().sort().join(", "); // Sắp xếp để tránh trùng lặp
+              if (!set.has(sortedCandidate)) {
+                candidates.push(candidate);
+                set.add(sortedCandidate); // Đảm bảo không lặp lại
+              }
+            }
+          }
+        }
+
+        return candidates;
+      }
+
+      // Kiểm tra xem một itemset có phải là tập con của một giao dịch không
+      function isSubset(itemset, transaction) {
+        return itemset.every((item) => transaction.includes(item));
+      }
+
+      // Hiển thị kết quả itemsets phổ biến
+      function displayFrequentItemsets(itemsets) {
+        const resultDiv = document.getElementById("frequent-itemsets-result");
+        resultDiv.innerHTML = "";
+
+        if (itemsets.length === 0) {
+          resultDiv.innerHTML = "<p>Không tìm thấy tập phổ biến nào.</p>";
+          return;
+        }
+
+        const ul = document.createElement("ul");
+        itemsets.forEach((itemset) => {
+          const li = document.createElement("li");
+          li.innerText = `[${itemset.join(", ")}]`;
+          ul.appendChild(li);
+        });
+
+        resultDiv.appendChild(ul);
+      }
+    </script>
   </body>
 </html>
