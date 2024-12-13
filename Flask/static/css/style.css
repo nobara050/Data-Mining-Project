@@ -4,7 +4,8 @@
   margin: 0;
   text-decoration: none;
   list-style: none;
-  color: black; /* Màu chữ đen */
+  color: black;
+  /* Màu chữ đen */
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -52,6 +53,7 @@ nav {
   align-items: center;
   gap: 1rem;
 }
+
 .option li {
   padding: 0.8rem;
   font-weight: 400;
@@ -59,10 +61,12 @@ nav {
 
 .option li:hover {
   background-color: #1e8648;
+
   a,
   span {
     color: white;
   }
+
   border-radius: 0.75rem 0.75rem 0 0;
 }
 
@@ -197,6 +201,42 @@ nav {
 }
 
 .column-btn.selected {
-  background-color: #082209; /* Green background for selected column */
+  background-color: #082209;
+  /* Green background for selected column */
   color: white;
+}
+
+
+/* CSS cho nút button có class .exitBtn */
+#exitBtn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 16px;
+  margin-top: 10px;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #dc3545;
+  /* Màu đỏ cho nút thoát */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hiệu ứng khi rê chuột qua nút */
+#exitBtn:hover {
+  background-color: #c82333;
+  /* Tông đỏ đậm hơn khi hover */
+  transform: scale(1.05);
+  /* Hiệu ứng phóng to nhẹ */
+}
+
+/* Hiệu ứng khi nhấn vào nút */
+#exitBtn:active {
+  background-color: #bd2130;
+  /* Tông đỏ sẫm khi nhấn */
+  transform: scale(0.95);
+  /* Hiệu ứng thu nhỏ nhẹ khi nhấn */
 }

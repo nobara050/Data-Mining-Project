@@ -265,106 +265,91 @@ def predict_gini():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ===============================================
+def load_data(file_path):
+    data = pd.read_excel(file_path)
+    # Bỏ cột đầu tiên nếu nó chỉ là thứ tự hoặc không có tiêu đề rõ ràng
+    if data.columns[0].lower().startswith('unnamed'):
+        data = data.iloc[:, 1:]
+    return data
 
 
-@app.route('/upload_naive_bayes', methods=['POST'])
-def upload_naive_bayes():
-    global dataset, model, encoders
-    encoders = {}
-    model = None
+@app.route('/uploadbayes', methods=['POST'])
+def upload_file():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-
+        return redirect(url_for('index'))
     file = request.files['file']
-    if not file.filename.endswith('.csv'):
-        return jsonify({'error': 'Invalid file format'}), 400
+    if file.filename == '':
+        return redirect(url_for('index'))
 
-    try:
-        clear_uploads()
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(filepath)
+    file_path = 'uploaded_file.xlsx'
+    file.save(file_path)
+    data = load_data(file_path)
 
-        encoding = detect_encoding(filepath)
-        df = pd.read_csv(filepath, encoding=encoding)
-
-        table_html = df.to_html(index=False, classes='table table-bordered', header=True)
-        columns = df.columns.tolist()  # Lưu cột trong DataFrame
-        data = df.values.tolist()  # Dữ liệu thô
-
-        dataset = df
-
-        return jsonify({'table': table_html, 'columns': columns, 'data': data}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    unique_values = {col: data[col].unique().tolist() for col in data.columns[:-1]}
+    return render_template('data.html', data_table=data.to_html(index=False), data=data, unique_values=unique_values)
 
 
-@app.route('/predict_naive_bayes', methods=['POST'])
-def predict_naive_bayes():
-    global dataset, model
+def naive_bayes_classifier(data, sample, laplace_smoothing=True):
+    target_column = data.columns[-1]
+    classes = data[target_column].unique()
+    class_probs = {}
+    feature_probs = {}
 
-    try:
-        data = request.get_json()
-        selected_values = data.get("selected_values")
+    for cls in classes:
+        class_data = data[data[target_column] == cls]
+        class_probs[cls] = len(class_data) / len(data)
 
-        # Tạo DataFrame từ selected_values (các giá trị combobox)
-        combobox_df = pd.DataFrame([selected_values], columns=dataset.columns[:-1])  # Loại bỏ cột target
+        for col in data.columns[:-1]:
+            if col not in feature_probs:
+                feature_probs[col] = {}
+            value_counts = class_data[col].value_counts()
+            total_values = len(class_data)
+            unique_values = len(data[col].unique())
 
-        # Tiền xử lý dữ liệu
-        dataset_no_target = dataset.drop(columns=[dataset.columns[-1]])  # Loại bỏ cột mục tiêu trước khi encode
+            if laplace_smoothing:
+                # Áp dụng Laplace smoothing
+                feature_probs[col][cls] = {
+                    value: (value_counts.get(value, 0) + 1) / (total_values + unique_values)
+                    for value in data[col].unique()
+                }
+            else:
+                feature_probs[col][cls] = value_counts / total_values
 
-        # Áp dụng OneHotEncoder cho các cột tính năng (X)
-        encoder = OneHotEncoder(sparse_output=False, drop='first')
-        encoded_data = encoder.fit_transform(dataset_no_target)
-        pre_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out(dataset_no_target.columns))
+    results = {}
+    for cls in classes:
+        prob = class_probs[cls]
+        for feature, value in sample.items():
+            if value in feature_probs[feature][cls]:
+                prob *= feature_probs[feature][cls][value]
+            else:
+                prob *= 1 / (len(data[data[target_column] == cls]) + len(data[feature].unique())) if laplace_smoothing else 0
+        results[cls] = round(prob, 3)  # Làm tròn xác suất đến 3 chữ số thập phân
 
-        # Sử dụng LabelEncoder cho cột mục tiêu (y)
-        target = dataset[dataset.columns[-1]]
-        label_encoder = LabelEncoder()
-        target_encoded = label_encoder.fit_transform(target)  # Mã hóa cột mục tiêu thành các số nguyên
+    return max(results, key=results.get), results
 
-        # Chia X (tính năng) và y (cột mục tiêu đã được mã hóa)
-        X = pre_df
-        y = target_encoded  # y là mảng 1D với giá trị số nguyên
+from flask import Flask, render_template, request
 
-        # Huấn luyện mô hình với Laplace Smoothing (var_smoothing)
-        model = GaussianNB(var_smoothing=1e-9)  # Chỉnh var_smoothing nếu cần làm trơn (Laplace Smoothing)
-        model.fit(X, y)
+@app.route('/classify', methods=['POST'])
+def classify_sample():
+    file_path = 'uploaded_file.xlsx'
+    data = load_data(file_path)
 
-        # Tiền xử lý dữ liệu combobox (giống như đã làm với train data)
-        combobox_df_pre = encoder.transform(combobox_df)
-        combobox_df_pre = pd.DataFrame(combobox_df_pre, columns=encoder.get_feature_names_out(combobox_df.columns))
+    sample = {}
+    for col in data.columns[:-1]:
+        value = request.form.get(col)
+        if value:  # Chỉ thêm vào mẫu nếu người dùng đã chọn giá trị
+            sample[col] = value
 
-        # Kiểm tra nếu có cột thiếu và thêm chúng với giá trị 0
-        missing_cols = set(X.columns) - set(combobox_df_pre.columns)
-        for col in missing_cols:
-            combobox_df_pre[col] = 0  # Thêm cột thiếu với giá trị 0 (nếu có)
+    if not sample:
+        # Render trang lỗi với thông báo cụ thể
+        return render_template('error.html', error_message="Vui lòng chọn ít nhất một giá trị cho phân lớp."), 400
 
-        # Dự đoán với mô hình đã huấn luyện
-        prediction = model.predict_proba(combobox_df_pre)
+    # Kiểm tra xem người dùng có chọn Laplace smoothing không
+    laplace_smoothing = 'laplace' in request.form
 
-        # Lấy xác suất cho từng lớp
-        prediction = prediction[0]  # Lấy kết quả cho một mẫu duy nhất
-
-        # Lấy tên các lớp (Cao, Thấp) từ label_encoder
-        target_columns = label_encoder.classes_.tolist()
-
-        # Trả về kết quả dự đoán và xác suất của từng lớp, chuyển đổi thành phần trăm
-        return jsonify({
-            'prediction': {
-                target_columns[0]: f"{prediction[0] * 100:.2f}%",  # Lớp Cao
-                target_columns[1]: f"{prediction[1] * 100:.2f}%"   # Lớp Thấp
-            }
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-
-
-
-
+    predicted_class, probabilities = naive_bayes_classifier(data, sample, laplace_smoothing=laplace_smoothing)
+    return render_template('result.html', predicted_class=predicted_class, probabilities=probabilities)
 
 
 # ==========================================

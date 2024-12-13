@@ -72,12 +72,15 @@ img {
 
 #new-prediction-table-container th,
 #new-prediction-table-container td {
-  padding: 0.5rem; /* Đảm bảo có khoảng cách giữa chữ và viền */
-  text-align: left; /* Điều chỉnh căn chỉnh nếu cần */
+  padding: 0.5rem;
+  /* Đảm bảo có khoảng cách giữa chữ và viền */
+  text-align: left;
+  /* Điều chỉnh căn chỉnh nếu cần */
 }
 
 #new-prediction-table-container th {
-  background-color: #f2f2f2; /* Tùy chọn cho màu nền của tiêu đề */
+  background-color: #f2f2f2;
+  /* Tùy chọn cho màu nền của tiêu đề */
 }
 
 #confusion-matrix-container {
@@ -104,4 +107,194 @@ img {
   background-color: #fdf2f2;
   color: #cf3f40;
   border: 2px solid #f05252;
+}
+
+/* ============================ */
+/* Bao bọc toàn bộ phần tử trong div.wrapper */
+.wrapper {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+/* Tiêu đề chính */
+.wrapper h1 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-align: center;
+  color: #333;
+}
+
+/* Tiêu đề phụ */
+.wrapper h2 {
+  font-size: 20px;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  color: #555;
+}
+
+/* Form tổng quát */
+.wrapper form {
+  margin-top: 10px;
+}
+
+/* Nhãn trong form */
+.wrapper form label {
+  font-size: 16px;
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Dropdown */
+.wrapper form select {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+/* Checkbox */
+.wrapper form input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* Nút bấm */
+.wrapper form button {
+  display: inline-block;
+  background-color: #007BFF;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.wrapper form button:hover {
+  background-color: #0056b3;
+}
+
+/* Định dạng khoảng cách dòng */
+.wrapper form br {
+  line-height: 1.5;
+}
+
+/* Bảng hiển thị dữ liệu */
+.wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wrapper table thead {
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+.wrapper table th,
+.wrapper table td {
+  text-align: left;
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.wrapper table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.wrapper table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.wrapper table th {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.wrapper table td {
+  font-size: 14px;
+  color: #555;
+}
+
+
+/* CSS chỉ áp dụng cho div.wrapper có class classification-result */
+.wrapper.classification-result {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Tiêu đề chính */
+.wrapper.classification-result h1 {
+  font-size: 24px;
+  color: #333;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+/* Đoạn văn bản thông tin */
+.wrapper.classification-result p {
+  font-size: 18px;
+  color: #444;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Tiêu đề phụ */
+.wrapper.classification-result h2 {
+  font-size: 20px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Danh sách kết quả */
+.wrapper.classification-result ul {
+  list-style-type: none;
+  padding: 0;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.wrapper.classification-result ul li {
+  font-size: 16px;
+  color: #555;
+  background-color: #f4f4f4;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Liên kết quay lại */
+.wrapper.classification-result a {
+  display: block;
+  margin-top: 20px;
+  font-size: 16px;
+  color: #007BFF;
+  text-decoration: none;
+  text-align: center;
+}
+
+.wrapper.classification-result a:hover {
+  color: #0056b3;
+  text-decoration: underline;
 }

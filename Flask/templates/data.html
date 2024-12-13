@@ -15,7 +15,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/chuong5.css') }}"
+      href="{{ url_for('static', filename='css/chuong4_bayes.css') }}"
     />
   </head>
   <body>
@@ -65,34 +65,26 @@
     </nav>
 
     <div class="wrapper">
-      <h1 class="titlePage">Gom cụm</h1>
-      <div class="inputFile">
-        <!-- Form upload file CSV -->
-        <div class="btnNhapFile">
-          <label for="csv-upload" class="upload-label"></label>
-          <input
-            type="file"
-            id="csv-upload"
-            accept=".csv"
-            onchange="handleFileUpload(event)"
-          />
-          <div id="table-container" class="table-container"></div>
-        </div>
+      <h1>Dữ liệu từ file Excel</h1>
+      {{ data_table|safe }}
+      <!-- Hiển thị dữ liệu dạng bảng HTML -->
 
-        <!-- Vùng để hiển thị bảng -->
-        <div id="columns-buttons-container"></div>
-      </div>
-      <hr style="margin: 1rem" />
-      <div class="inputKmean">
-        <span class="titleKmean">Nhập K-mean</span>
-        <input class="numKmean" type="number" step="1" />
-        <button id="start-kmean-btn" onclick="handleKMeans()">
-          Bắt đầu gom cụm
-        </button>
-      </div>
-      <div id="result" class="result-container"></div>
-      <div class="Diagram-cluster"></div>
+      <h2>Chọn mẫu để phân lớp</h2>
+      <form action="/classify" method="post">
+        {% for col in data.columns[:-1] %}
+        <label for="{{ col }}">{{ col }}:</label>
+        <select id="{{ col }}" name="{{ col }}">
+          <option value="">Không chọn</option>
+          <!-- Thêm tùy chọn 'Không chọn' -->
+          {% for value in unique_values[col] %}
+          <option value="{{ value }}">{{ value }}</option>
+          {% endfor %}
+        </select>
+        {% endfor %}
+        <label for="laplace">Sử dụng Laplace smoothing:</label>
+        <input type="checkbox" id="laplace" name="laplace" /><br /><br />
+        <button type="submit">Phân lớp</button>
+      </form>
     </div>
-    <script src="{{ url_for('static', filename='js/chuong5.js') }}"></script>
   </body>
 </html>

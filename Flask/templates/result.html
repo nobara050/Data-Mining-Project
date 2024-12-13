@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 5 - Gom cụm</title>
+    <title>Chương 4 - Phân lớp bằng Gini</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -15,8 +15,9 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/chuong5.css') }}"
+      href="{{ url_for('static', filename='css/chuong4_bayes.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   </head>
   <body>
     <nav>
@@ -64,35 +65,16 @@
       </ul>
     </nav>
 
-    <div class="wrapper">
-      <h1 class="titlePage">Gom cụm</h1>
-      <div class="inputFile">
-        <!-- Form upload file CSV -->
-        <div class="btnNhapFile">
-          <label for="csv-upload" class="upload-label"></label>
-          <input
-            type="file"
-            id="csv-upload"
-            accept=".csv"
-            onchange="handleFileUpload(event)"
-          />
-          <div id="table-container" class="table-container"></div>
-        </div>
-
-        <!-- Vùng để hiển thị bảng -->
-        <div id="columns-buttons-container"></div>
-      </div>
-      <hr style="margin: 1rem" />
-      <div class="inputKmean">
-        <span class="titleKmean">Nhập K-mean</span>
-        <input class="numKmean" type="number" step="1" />
-        <button id="start-kmean-btn" onclick="handleKMeans()">
-          Bắt đầu gom cụm
-        </button>
-      </div>
-      <div id="result" class="result-container"></div>
-      <div class="Diagram-cluster"></div>
+    <div class="wrapper classification-result">
+      <h1>Kết quả phân lớp</h1>
+      <p>Phân lớp dự đoán: {{ predicted_class }}</p>
+      <h2>Xác suất</h2>
+      <ul>
+        {% for cls, prob in probabilities.items() %}
+        <li>{{ cls }}: {{ prob }}</li>
+        {% endfor %}
+      </ul>
+      <a href="/">Quay lại</a>
     </div>
-    <script src="{{ url_for('static', filename='js/chuong5.js') }}"></script>
   </body>
 </html>

@@ -41,9 +41,7 @@
         <li>
           <a href="/chuong2">Tập phổ biến</a>
         </li>
-        <li>
-          <a href="/chuong3">Tập thô</a>
-        </li>
+
         <li class="option-chuong4-absolute">
           <span>Phân lớp</span>
           <div class="option-chuong4-wrapper">
@@ -69,138 +67,12 @@
 
     <div class="wrapper">
       <h2>Naive Bayes</h2>
-      <input type="file" id="file-input" accept=".csv" />
-      <div id="csv-table-container"></div>
-      <div id="combobox-container"></div>
-      <div>
-        <label for="laplace-checkbox">Sử dụng Laplace Smoothing:</label>
-        <input type="checkbox" id="laplace-checkbox" />
-      </div>
-      <button id="predict-btn">Dự đoán</button>
-      <div id="prediction-result"></div>
-      <div id="feature-columns-result"></div>
 
-      <script>
-        let csvData = []; // Dữ liệu CSV
-        let columns = []; // Danh sách cột
-
-        document
-          .getElementById("file-input")
-          .addEventListener("change", function (event) {
-            const file = event.target.files[0];
-            if (file) {
-              const formData = new FormData();
-              formData.append("file", file);
-
-              // Gửi file lên Flask
-              fetch("/upload_naive_bayes", {
-                method: "POST",
-                body: formData,
-              })
-                .then((response) => response.json())
-                .then((data) => {
-                  if (data.error) {
-                    alert("Lỗi: " + data.error);
-                  } else {
-                    // Hiển thị dữ liệu (bảng HTML và cột)
-                    document.getElementById("csv-table-container").innerHTML =
-                      data.table;
-                    columns = data.columns; // Cập nhật danh sách cột
-                    csvData = data.data; // Lưu lại dữ liệu thô
-                    createComboBoxes(); // Tạo combo box từ cột và dữ liệu
-                  }
-                })
-                .catch((error) => console.error("Lỗi khi gửi file:", error));
-            }
-          });
-
-        function createComboBoxes() {
-          const comboBoxContainer =
-            document.getElementById("combobox-container");
-          comboBoxContainer.innerHTML = ""; // Xóa combo box cũ nếu có
-
-          columns.forEach((column, colIndex) => {
-            // Bỏ qua cột cuối cùng (target column) khi tạo combobox
-            if (colIndex !== columns.length - 1) {
-              const uniqueValues = [
-                ...new Set(csvData.map((row) => row[colIndex])), // Loại bỏ giá trị trùng lặp
-              ];
-
-              const label = document.createElement("label");
-              label.textContent = `Chọn giá trị cho cột "${column}":`;
-
-              const select = document.createElement("select");
-              select.id = `column-${colIndex}`;
-
-              uniqueValues.forEach((value) => {
-                const option = document.createElement("option");
-                option.value = value;
-                option.textContent = value;
-                select.appendChild(option);
-              });
-
-              comboBoxContainer.appendChild(label);
-              comboBoxContainer.appendChild(select);
-              comboBoxContainer.appendChild(document.createElement("br"));
-            }
-          });
-        }
-
-        document
-          .getElementById("predict-btn")
-          .addEventListener("click", function () {
-            const comboboxValues = [];
-            columns.forEach((column, colIndex) => {
-              const select = document.getElementById(`column-${colIndex}`);
-              if (select) {
-                comboboxValues.push(select.value);
-              }
-            });
-
-            const useLaplace =
-              document.getElementById("laplace-checkbox").checked;
-
-            // Gửi yêu cầu tới Flask
-            fetch("/predict_naive_bayes", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                selected_values: comboboxValues,
-                use_laplace: useLaplace,
-              }),
-            })
-              .then((response) => response.json())
-              .then((data) => {
-                if (data.error) {
-                  alert("Lỗi: " + data.error);
-                } else {
-                  // Xử lý kết quả nếu không có lỗi
-                  console.log(data); // Kiểm tra kết quả từ server
-                  const predictionResult =
-                    document.getElementById("prediction-result");
-                  if (predictionResult) {
-                    let resultHTML = "<strong>Kết quả dự đoán:</strong><br>";
-                    if (data.prediction) {
-                      for (const [label, value] of Object.entries(
-                        data.prediction
-                      )) {
-                        resultHTML += `${label}: ${value}<br>`;
-                      }
-                      predictionResult.innerHTML = resultHTML;
-                    } else {
-                      predictionResult.innerHTML = "Không có kết quả dự đoán.";
-                    }
-                  }
-                }
-              })
-              .catch((error) => {
-                console.error("Lỗi khi gửi yêu cầu dự đoán:", error);
-                alert("Lỗi khi nhận dữ liệu từ server.");
-              });
-          });
-      </script>
+      <h1>Naive Bayes Classifier - Tải lên dữ liệu Excel</h1>
+      <form action="/uploadbayes" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx" required />
+        <button type="submit">Tải lên</button>
+      </form>
     </div>
   </body>
 </html>
