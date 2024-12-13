@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chương 2 -Tập phổ biến</title>
+    <title>Chương 2 - Tập phổ biến</title>
     <link
       rel="icon"
       type="image/x-icon"
@@ -13,6 +13,11 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/chuong1.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
   </head>
   <body>
     <nav>
@@ -61,6 +66,540 @@
         </li>
       </ul>
     </nav>
-    <div class="wrapper"></div>
+
+    <div class="wrapper">
+      <div class="content">
+        <h1 class="titlePage">Tải và Hiển thị File Excel</h1>
+
+        <div id="excel-file-upload">
+          <label for="excel-file-input"
+            >Chọn file Excel (dạng .xlsx hoặc .xls):</label
+          >
+          <input type="file" id="excel-file-input" accept=".xlsx, .xls" />
+          <button onclick="processExcel()">Xử lý File</button>
+
+          <h3>Ma trận Dữ liệu</h3>
+          <div id="matrix-result"></div>
+
+          <h3 style="padding-top: 20px">
+            Nhập Tần Suất Tối Thiểu (min_sup từ 0 đến 1)
+          </h3>
+          <input
+            type="number"
+            id="min-sup"
+            min="0"
+            max="1"
+            step="0.1"
+            style="width: 100px; height: 30px; font-size: 18px"
+          />
+
+          <button onclick="findFrequentItemsets()">Tìm Tập Phổ Biến</button>
+          <button onclick="findMaxFrequentItemsets()">
+            Tìm Tập Phổ Biến Tối Đại
+          </button>
+
+          <h3>Tập Phổ Biến</h3>
+          <div id="frequent-itemsets-result"></div>
+
+          <h3>Tập Phổ Biến Tối Đại</h3>
+          <div id="max-frequent-itemsets-result"></div>
+
+          <h3>Nhập Độ Tin Cậy Tối Thiểu (min_conf từ 0 đến 1)</h3>
+          <input
+            type="number"
+            id="min-conf"
+            min="0"
+            max="1"
+            step="0.1"
+            style="width: 100px; height: 30px; font-size: 18px"
+          />
+
+          <button onclick="findAssociationRules()">Tìm Các Luật Kết Hợp</button>
+
+          <h3>Các Luật Kết Hợp</h3>
+          <div id="association-rules-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let transactions = [];
+
+      function processExcel() {
+        const fileInput = document.getElementById("excel-file-input");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          alert("Vui lòng chọn một file Excel.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          jsonData.shift(); // Bỏ qua dòng đầu tiên (header)
+
+          const matrix = convertToBinaryMatrix(jsonData);
+          displayMatrix(matrix);
+
+          transactions = convertToTransactions(matrix);
+          console.log("Transactions:", transactions);
+        };
+
+        reader.readAsBinaryString(file);
+      }
+
+      function convertToBinaryMatrix(data) {
+        const invoices = new Set();
+        const items = new Set();
+
+        data.forEach((row) => {
+          const invoice = row[0];
+          const item = row[1];
+          invoices.add(invoice);
+          items.add(item);
+        });
+
+        const invoicesArray = Array.from(invoices);
+        const itemsArray = Array.from(items);
+
+        const matrix = invoicesArray.map((invoice) => {
+          return itemsArray.map((item) => {
+            return data.some((row) => row[0] === invoice && row[1] === item)
+              ? 1
+              : 0;
+          });
+        });
+
+        return { invoices: invoicesArray, items: itemsArray, matrix };
+      }
+
+      function convertToTransactions(matrixData) {
+        const transactions = [];
+        matrixData.matrix.forEach((row, rowIndex) => {
+          const transaction = [];
+          row.forEach((value, colIndex) => {
+            if (value === 1) {
+              transaction.push(matrixData.items[colIndex]);
+            }
+          });
+          if (transaction.length > 0) {
+            transactions.push(transaction);
+          }
+        });
+        return transactions;
+      }
+
+      function displayMatrix(matrixData) {
+        const resultDiv = document.getElementById("matrix-result");
+        resultDiv.innerHTML = "";
+
+        const table = document.createElement("table");
+        const headerRow = document.createElement("tr");
+        const headerCell = document.createElement("th");
+        headerCell.innerText = "Hóa đơn";
+        headerRow.appendChild(headerCell);
+
+        matrixData.items.forEach((item) => {
+          const itemCell = document.createElement("th");
+          itemCell.innerText = item;
+          headerRow.appendChild(itemCell);
+        });
+        table.appendChild(headerRow);
+
+        matrixData.matrix.forEach((row, rowIndex) => {
+          const rowElement = document.createElement("tr");
+
+          const rowHeader = document.createElement("td");
+          rowHeader.innerText = `${matrixData.invoices[rowIndex]}`;
+          rowElement.appendChild(rowHeader);
+
+          row.forEach((value) => {
+            const cell = document.createElement("td");
+            cell.innerText = value;
+            rowElement.appendChild(cell);
+          });
+
+          table.appendChild(rowElement);
+        });
+
+        resultDiv.appendChild(table);
+      }
+
+      function findFrequentItemsets() {
+        const minSup = parseFloat(document.getElementById("min-sup").value);
+        const itemsets = aprioriAlgorithm(transactions, minSup);
+        displayFrequentItemsets(itemsets);
+      }
+
+      function aprioriAlgorithm(transactions, minSup) {
+        const totalTransactions = transactions.length;
+        let itemsets = [];
+        const itemCounts = {};
+
+        transactions.forEach((transaction) => {
+          transaction.forEach((item) => {
+            itemCounts[item] = (itemCounts[item] || 0) + 1;
+          });
+        });
+
+        const frequentItemsets = [];
+        Object.keys(itemCounts).forEach((item) => {
+          const support = itemCounts[item] / totalTransactions;
+          if (support >= minSup) {
+            frequentItemsets.push([item]); // Lưu lại các tập phổ biến đơn lẻ
+          }
+        });
+
+        itemsets = frequentItemsets;
+        const allFrequentItemsets = [...frequentItemsets];
+
+        let k = 2;
+        const seenItemsets = new Set();
+
+        while (itemsets.length > 0) {
+          const candidateItemsets = generateCandidates(itemsets, k);
+          const candidateCounts = {};
+
+          transactions.forEach((transaction) => {
+            candidateItemsets.forEach((candidate) => {
+              const sortedCandidate = candidate.slice().sort().join(", ");
+              if (
+                isSubset(candidate, transaction) &&
+                !seenItemsets.has(sortedCandidate)
+              ) {
+                candidateCounts[sortedCandidate] =
+                  (candidateCounts[sortedCandidate] || 0) + 1;
+              }
+            });
+          });
+
+          const frequentCandidates = [];
+          for (const [candidate, count] of Object.entries(candidateCounts)) {
+            const support = count / totalTransactions;
+            if (support >= minSup) {
+              frequentCandidates.push(candidate.split(", "));
+              seenItemsets.add(candidate);
+            }
+          }
+
+          if (frequentCandidates.length > 0) {
+            allFrequentItemsets.push(...frequentCandidates);
+            itemsets = frequentCandidates;
+          } else {
+            break;
+          }
+
+          k++;
+        }
+
+        return allFrequentItemsets;
+      }
+
+      function generateCandidates(itemsets, k) {
+        const candidates = [];
+        const set = new Set();
+
+        for (let i = 0; i < itemsets.length; i++) {
+          for (let j = i + 1; j < itemsets.length; j++) {
+            const candidate = [...new Set([...itemsets[i], ...itemsets[j]])];
+            if (candidate.length === k) {
+              const sortedCandidate = candidate.slice().sort().join(", ");
+              if (!set.has(sortedCandidate)) {
+                candidates.push(candidate);
+                set.add(sortedCandidate);
+              }
+            }
+          }
+        }
+
+        return candidates;
+      }
+
+      function isSubset(itemset, transaction) {
+        return itemset.every((item) => transaction.includes(item));
+      }
+
+      function displayFrequentItemsets(itemsets) {
+        const resultDiv = document.getElementById("frequent-itemsets-result");
+        resultDiv.innerHTML = "";
+
+        if (itemsets.length === 0) {
+          resultDiv.innerHTML = "<p>Không tìm thấy tập phổ biến nào.</p>";
+          return;
+        }
+
+        const ul = document.createElement("ul");
+        itemsets.forEach((itemset) => {
+          const li = document.createElement("li");
+          li.innerText = `[${itemset.join(", ")}]`;
+          ul.appendChild(li);
+        });
+
+        resultDiv.appendChild(ul);
+      }
+
+      function findMaxFrequentItemsets() {
+        const minSup = parseFloat(document.getElementById("min-sup").value);
+        const itemsets = aprioriAlgorithm(transactions, minSup);
+
+        // Tìm tập phổ biến tối đại
+        const maxItemsets = findMaximalItemsets(itemsets);
+
+        // Hiển thị các tập phổ biến tối đại
+        displayMaxFrequentItemsets(maxItemsets);
+      }
+
+      // Hàm kiểm tra tập phổ biến tối đại
+      function findMaximalItemsets(itemsets) {
+        let maxItemsets = [];
+
+        itemsets.forEach((itemset) => {
+          let isMaximal = true;
+          itemsets.forEach((otherItemset) => {
+            if (
+              itemset.length < otherItemset.length &&
+              isSubset(itemset, otherItemset)
+            ) {
+              isMaximal = false;
+            }
+          });
+
+          if (isMaximal) {
+            maxItemsets.push(itemset);
+          }
+        });
+
+        return maxItemsets;
+      }
+
+      // Hàm kiểm tra một tập là tập con của một tập khác
+      function isSubset(itemset, otherItemset) {
+        return itemset.every((item) => otherItemset.includes(item));
+      }
+
+      function displayMaxFrequentItemsets(itemsets) {
+        const resultDiv = document.getElementById(
+          "max-frequent-itemsets-result"
+        );
+        resultDiv.innerHTML = "";
+
+        if (itemsets.length === 0) {
+          resultDiv.innerHTML =
+            "<p>Không tìm thấy tập phổ biến tối đại nào.</p>";
+          return;
+        }
+
+        const ul = document.createElement("ul");
+        itemsets.forEach((itemset) => {
+          const li = document.createElement("li");
+          li.innerText = `[${itemset.join(", ")}]`;
+          ul.appendChild(li);
+        });
+
+        resultDiv.appendChild(ul);
+      }
+
+      function findAssociationRules() {
+        const minConf = parseFloat(document.getElementById("min-conf").value);
+        const minSup = parseFloat(document.getElementById("min-sup").value);
+
+        if (isNaN(minConf) || minConf < 0 || minConf > 1) {
+          alert("Vui lòng nhập min_conf từ 0 đến 1.");
+          return;
+        }
+
+        // Lấy tập phổ biến từ thuật toán Apriori
+        if (isNaN(minSup) || minSup < 0 || minSup > 1) {
+          alert("Vui lòng nhập min_sup từ 0 đến 1.");
+          return;
+        }
+
+        const itemsets = aprioriAlgorithm(transactions, minSup);
+
+        // Tạo các luật kết hợp từ các tập phổ biến
+        const associationRules = generateAssociationRules(
+          itemsets,
+          minConf,
+          minSup
+        );
+
+        // Hiển thị các luật kết hợp
+        displayAssociationRules(associationRules);
+      }
+      function generateAssociationRules(itemsets, minConf, minSup) {
+        const rules = [];
+        const seenRules = new Set(); // Để theo dõi các luật đã tạo
+
+        // Duyệt qua từng itemset
+        itemsets.forEach((itemset) => {
+          // Chỉ tạo luật với các itemset có từ 2 phần tử trở lên
+          if (itemset.length < 2) return;
+
+          // Tạo các luật kết hợp (X -> Y) từ itemset
+          for (let i = 1; i < itemset.length; i++) {
+            const subsets = getSubsets(itemset, i); // Lấy tất cả các tập con với kích thước i
+            subsets.forEach((antecedent) => {
+              // Phần còn lại của luật sẽ là (itemset - antecedent)
+              const consequent = itemset.filter(
+                (item) => !antecedent.includes(item)
+              );
+
+              // Nếu antecedent và consequent đều không rỗng
+              if (antecedent.length > 0 && consequent.length > 0) {
+                const supportX = calculateSupport(antecedent); // Tính support của antecedent
+                const supportXY = calculateSupport(
+                  antecedent.concat(consequent)
+                ); // Tính support của toàn bộ itemset
+
+                // Tính confidence của luật (antecedent -> consequent)
+                const confidence = supportXY / supportX;
+
+                // Kiểm tra nếu confidence >= minConf và supportXY >= minSup
+                if (confidence >= minConf && supportXY >= minSup) {
+                  // Chuyển antecedent và consequent thành chuỗi để dễ so sánh
+                  const ruleString = `(${antecedent
+                    .sort()
+                    .join(", ")}) -> (${consequent.sort().join(", ")})`;
+
+                  // Kiểm tra xem luật này có phải là con của luật nào đó đã tồn tại hay không
+                  const isCoveredByExistingRule = rules.some(
+                    (rule) =>
+                      isSubset(antecedent, rule.antecedent) &&
+                      isSubset(consequent, rule.consequent)
+                  );
+
+                  // Nếu luật không bị bao phủ bởi bất kỳ luật nào, thêm vào danh sách
+                  if (!isCoveredByExistingRule && !seenRules.has(ruleString)) {
+                    rules.push({
+                      antecedent: antecedent,
+                      consequent: consequent,
+                      confidence: confidence,
+                      support: supportXY,
+                    });
+                    seenRules.add(ruleString); // Đánh dấu luật này đã tồn tại
+                  }
+                }
+              }
+            });
+          }
+        });
+
+        return rules; // Trả về các luật thỏa mãn điều kiện
+      }
+
+      // Hàm kiểm tra một tập con là một phần của một giao dịch
+      function isSubset(subset, superset) {
+        return subset.every((item) => superset.includes(item));
+      }
+
+      function removeRedundantRules(rules) {
+        const uniqueRules = [];
+
+        rules.forEach((rule) => {
+          let isRedundant = false;
+
+          // Kiểm tra nếu antecedent và consequent của rule này có bị trùng lặp với luật khác
+          for (let i = 0; i < uniqueRules.length; i++) {
+            const existingRule = uniqueRules[i];
+
+            // Nếu antecedent và consequent giống nhau (không phân biệt thứ tự), coi là trùng lặp
+            if (
+              arraysEqual(
+                rule.antecedent.sort(),
+                existingRule.antecedent.sort()
+              ) &&
+              arraysEqual(
+                rule.consequent.sort(),
+                existingRule.consequent.sort()
+              )
+            ) {
+              isRedundant = true;
+              break;
+            }
+          }
+
+          // Nếu không phải luật trùng lặp, thêm vào danh sách
+          if (!isRedundant) {
+            uniqueRules.push(rule);
+          }
+        });
+
+        return uniqueRules;
+      }
+
+      // Hàm so sánh hai mảng
+      function arraysEqual(arr1, arr2) {
+        return (
+          arr1.length === arr2.length &&
+          arr1.every((value, index) => value === arr2[index])
+        );
+      }
+
+      // Hàm lấy tất cả các tập con hợp lệ của một tập
+      function getSubsets(itemset, size) {
+        const subsets = [];
+        const subsetGenerator = (arr, n, index, data, i) => {
+          if (index === size) {
+            subsets.push(data.slice(0, size));
+            return;
+          }
+          if (i >= arr.length) return;
+          data[index] = arr[i];
+          subsetGenerator(arr, n, index + 1, data, i + 1);
+          subsetGenerator(arr, n, index, data, i + 1);
+        };
+        subsetGenerator(itemset, itemset.length, 0, [], 0);
+        return subsets;
+      }
+
+      // Hàm tính support của một itemset
+      function calculateSupport(itemset) {
+        const totalTransactions = transactions.length;
+        let count = 0;
+        transactions.forEach((transaction) => {
+          if (isSubset(itemset, transaction)) {
+            count++;
+          }
+        });
+        return count / totalTransactions; // Đảm bảo tính đúng tỷ lệ support
+      }
+
+      // Hàm kiểm tra một tập con là một phần của một giao dịch
+      function isSubset(itemset, transaction) {
+        return itemset.every((item) => transaction.includes(item));
+      }
+
+      // Hàm hiển thị các luật kết hợp
+      function displayAssociationRules(rules) {
+        const resultDiv = document.getElementById("association-rules-result");
+        resultDiv.innerHTML = "";
+
+        if (rules.length === 0) {
+          resultDiv.innerHTML =
+            "<p>Không tìm thấy luật kết hợp nào thỏa mãn điều kiện độ tin cậy.</p>";
+          return;
+        }
+
+        const ul = document.createElement("ul");
+        rules.forEach((rule) => {
+          const li = document.createElement("li");
+          li.innerText = `Luật: {${rule.antecedent.join(
+            ", "
+          )}} -> {${rule.consequent.join(
+            ", "
+          )}} | Confidence: ${rule.confidence.toFixed(
+            2
+          )} | Support: ${rule.support.toFixed(2)}`;
+          ul.appendChild(li);
+        });
+
+        resultDiv.appendChild(ul);
+      }
+    </script>
   </body>
 </html>
